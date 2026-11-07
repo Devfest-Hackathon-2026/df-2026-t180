@@ -39,7 +39,28 @@ python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 <http://127.0.0.1:8000/docs> で API ドキュメント、
 <http://127.0.0.1:8000/openapi.json> で OpenAPI 定義を確認できます。
 今回は起動用の最小構成のみで、業務 API は未実装です。
-API キーや認証情報、環境変数の設定は不要です。
+
+## Google Cloud の認証(Gemini を呼ぶとき)
+
+Gemini は Agent Platform 経由で呼びます。API キーは使わず、各自の Google アカウントで認証します。
+
+1. [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) をインストールする
+2. プロジェクト `hack26-project` に招待された Google アカウントで、次を一度だけ実行する
+
+```sh
+gcloud auth login
+gcloud config set project hack26-project
+gcloud auth application-default login
+gcloud auth application-default set-quota-project hack26-project
+```
+
+3. `.env.example` をコピーして `.env` を作る(`.env` は git に入れない)
+
+```sh
+cp .env.example .env
+```
+
+Cloud Run では、実行用のサービスアカウントに `roles/aiplatform.user`(Agent Platform User)を付けます。
 
 ## テスト・静的解析
 
