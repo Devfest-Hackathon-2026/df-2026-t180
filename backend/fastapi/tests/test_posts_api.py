@@ -1,0 +1,89 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from main import app
+from repositories.posts import get_post_repository
+from schemas.post import StoredPost
+
+POST = {"text": "夜間は静かにしてください。", "region": "sakai"}
+
+
+class FakePostRepository:
+    def __init__(self) -> None:
+        self.saved: list[StoredPost] = []
+
+    def add(self, post: StoredPost) -> str:
+        self.saved.append(post)
+        return f"post_{len(self.saved)}"
+
+
+@pytest.fixture
+def repository():
+    # Firestore の代わりにメモリに保存し、保存内容をテストから確認できるようにする。
+    fake = FakePostRepository()
+    app.dependency_overrides[get_post_repository] = lambda: fake
+    yield fake
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(repository):
+    with TestClient(app) as test_client:
+        yield test_client
+
+
+@pytest.mark.parametrize("reason", [None, "夜間の騒音で眠れないため。"])
+def test_create_post_saves_unprocessed_post(client, repository, reason):
+    # バッチが拾えるよう、保存直後の status が unprocessed になっていることを確認する。
+    payload = {**POST, "reason": reason}
+    response = client.post("/api/posts", json=payload)
+
+    assert response.status_code == 201
+    assert response.json() == {"id": "post_1"}
+    saved = repository.saved[0]
+    assert saved.model_dump(include={"text", "region", "reason"}) == payload
+    assert saved.status == "unprocessed"
+    assert saved.status_updated_at == saved.created_at
+    assert saved.created_at.utcoffset().total_seconds() == 0
+
+
+def test_create_post_accepts_missing_reason(client, repository):
+    response = client.post("/api/posts", json=POST)
+
+    assert response.status_code == 201
+    assert repository.saved[0].reason is None
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"status": "processed"},
+        {"created_at": "2026-01-01T00:00:00+09:00"},
+        {"status_updated_at": "2026-01-01T00:00:00+09:00"},
+    ],
+)
+def test_create_post_rejects_server_managed_fields(client, repository, extra):
+    # サーバーが管理する項目を住民が送ってきても、保存せずに拒否することを確認する。
+    response = client.post("/api/posts", json={**POST, **extra})
+
+    assert response.status_code == 422
+    assert repository.saved == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"region": "sakai"},
+        {"text": "夜間は静かにしてください。"},
+        {**POST, "text": " "},
+        {**POST, "region": ""},
+        {**POST, "reason": 123},
+        {**POST, "reason": ""},
+        {**POST, "reason": " "},
+    ],
+)
+def test_create_post_rejects_invalid_payload(client, repository, payload):
+    response = client.post("/api/posts", json=payload)
+
+    assert response.status_code == 422
+    assert repository.saved == []

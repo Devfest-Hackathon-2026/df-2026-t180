@@ -38,7 +38,6 @@ python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 <http://127.0.0.1:8000/docs> で API ドキュメント、
 <http://127.0.0.1:8000/openapi.json> で OpenAPI 定義を確認できます。
-今回は起動用の最小構成のみで、業務 API は未実装です。
 
 ## Google Cloud の認証(Gemini を呼ぶとき)
 
@@ -73,10 +72,10 @@ python -m ruff format --check .
 ## 構成
 
 - `main.py`: FastAPI アプリケーション
-- `api/`: API ルート（後続 PR で実装）
-- `schemas/`: データスキーマ（後続 PR で実装）
+- `api/`: API ルート
+- `schemas/`: データスキーマ
 - `services/`: 業務処理（後続 PR で実装）
-- `repositories/`: DB 操作（後続 PR で実装）
-- `tests/`: 起動確認テスト
+- `repositories/`: DB 操作
+- `tests/`: テスト
 
 Firestore、Gemini、Firebase Authentication の連携は後続 PR で実装します。

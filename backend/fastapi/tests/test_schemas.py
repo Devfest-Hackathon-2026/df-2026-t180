@@ -54,9 +54,9 @@ def test_schema_json_round_trip(schema, payload):
     assert model.model_dump(mode="json", exclude_unset=True) == payload
 
 
-@pytest.mark.parametrize("reason", [None, "", "音", "夜間の騒音で眠れないため。"])
+@pytest.mark.parametrize("reason", [None, "音", "夜間の騒音で眠れないため。"])
 def test_post_accepts_optional_reason(reason):
-    # 任意の投稿理由には、null・空文字・1文字・通常の文章を指定できることを確認する。
+    # 任意の投稿理由には、null・1文字・通常の文章を指定できることを確認する。
     assert Post(**POST, reason=reason).reason == reason
 
 
@@ -192,6 +192,13 @@ def test_post_rejects_non_string_reason():
     # 任意項目の投稿理由でも、数値は受け付けないことを確認する。
     with pytest.raises(ValidationError):
         Post(**POST, reason=123)
+
+
+@pytest.mark.parametrize("reason", ["", " \n\t"])
+def test_post_rejects_blank_reason(reason):
+    # 理由がないときは null か省略にそろえ、空文字や空白だけの文字列は拒否する。
+    with pytest.raises(ValidationError):
+        Post(**POST, reason=reason)
 
 
 @pytest.mark.parametrize(
