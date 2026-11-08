@@ -19,6 +19,7 @@ CANDIDATE = {
     "region": "sakai",
     "statement": STATEMENT,
     "status": "pending",
+    "type": "add",
 }
 RULE = {
     "id": "rule_001",
