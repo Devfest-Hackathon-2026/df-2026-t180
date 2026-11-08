@@ -9,6 +9,7 @@ class Candidate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: NonEmptyString
+    post_id: NonEmptyString
     region: NonEmptyString
     statement: LocalizedStatement
     status: Literal["pending", "approved", "rejected"]

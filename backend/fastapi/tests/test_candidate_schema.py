@@ -4,7 +4,8 @@ from pydantic import ValidationError
 from schemas.candidate import Candidate
 
 BASE = {
-    "id": "candidate_001",
+    "id": "abc123_1",
+    "post_id": "abc123",
     "region": "sakai",
     "statement": {"ja": "静かにしてください。", "en": "Please keep quiet."},
     "status": "pending",

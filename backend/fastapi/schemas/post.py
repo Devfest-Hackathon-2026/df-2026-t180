@@ -1,6 +1,8 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
-from schemas.common import NonEmptyString
+from schemas.common import NonEmptyString, UtcDatetime
 
 
 class Post(BaseModel):
@@ -9,3 +11,9 @@ class Post(BaseModel):
     text: NonEmptyString
     region: NonEmptyString
     reason: str | None = None
+
+
+class StoredPost(Post):
+    status: Literal["unprocessed", "processing", "processed"]
+    status_updated_at: UtcDatetime
+    created_at: UtcDatetime

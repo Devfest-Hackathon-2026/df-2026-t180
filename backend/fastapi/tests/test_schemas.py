@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from schemas.admin import Admin
 from schemas.candidate import Candidate
-from schemas.post import Post
+from schemas.post import Post, StoredPost
 from schemas.rule import Rule
 
 STATEMENT = {
@@ -14,8 +14,15 @@ STATEMENT = {
 }
 ADMIN = {"firebase_uid": "firebase-user-001", "employee_name": "管理者"}
 POST = {"text": "夜間は静かにしてください。", "region": "sakai"}
+STORED_POST = {
+    **POST,
+    "status": "unprocessed",
+    "status_updated_at": "2026-11-08T00:00:00Z",
+    "created_at": "2026-11-08T00:00:00Z",
+}
 CANDIDATE = {
-    "id": "candidate_001",
+    "id": "abc123_1",
+    "post_id": "abc123",
     "region": "sakai",
     "statement": STATEMENT,
     "status": "pending",
@@ -31,7 +38,13 @@ RULE = {
 
 @pytest.mark.parametrize(
     ("schema", "payload"),
-    [(Admin, ADMIN), (Post, POST), (Candidate, CANDIDATE), (Rule, RULE)],
+    [
+        (Admin, ADMIN),
+        (Post, POST),
+        (StoredPost, STORED_POST),
+        (Candidate, CANDIDATE),
+        (Rule, RULE),
+    ],
 )
 def test_schema_json_round_trip(schema, payload):
     # 正常なデータをJSONに変換し、読み戻しても内容が変わらないことを確認する。
@@ -52,7 +65,7 @@ def test_post_accepts_optional_reason(reason):
     [
         (Admin, ADMIN, ["firebase_uid", "employee_name"]),
         (Post, POST, ["text", "region"]),
-        (Candidate, CANDIDATE, ["id", "region"]),
+        (Candidate, CANDIDATE, ["id", "post_id", "region"]),
         (Rule, RULE, ["id", "region"]),
     ],
 )
@@ -115,7 +128,13 @@ def test_rule_parses_design_example_date():
 
 @pytest.mark.parametrize(
     ("schema", "payload"),
-    [(Admin, ADMIN), (Post, POST), (Candidate, CANDIDATE), (Rule, RULE)],
+    [
+        (Admin, ADMIN),
+        (Post, POST),
+        (StoredPost, STORED_POST),
+        (Candidate, CANDIDATE),
+        (Rule, RULE),
+    ],
 )
 def test_schema_rejects_missing_required_fields(schema, payload):
     # 必須項目を1つずつ省略し、どの項目が欠けてもエラーになることを確認する。
@@ -131,7 +150,7 @@ def test_schema_rejects_missing_required_fields(schema, payload):
     [
         (Admin, ADMIN, ["firebase_uid", "employee_name"]),
         (Post, POST, ["text", "region"]),
-        (Candidate, CANDIDATE, ["id", "region"]),
+        (Candidate, CANDIDATE, ["id", "post_id", "region"]),
         (Rule, RULE, ["id", "region"]),
     ],
 )
@@ -188,3 +207,49 @@ def test_schema_rejects_unknown_fields(schema, payload, extra):
     # パスワードや採否フラグなど、定義していない項目を受け付けないことを確認する。
     with pytest.raises(ValidationError):
         schema.model_validate({**payload, **extra})
+
+
+@pytest.mark.parametrize("status", ["unprocessed", "processing", "processed"])
+def test_stored_post_accepts_valid_status(status):
+    # バッチが使う3つの処理状態を受け付けることを確認する。
+    assert StoredPost.model_validate({**STORED_POST, "status": status}).status == status
+
+
+@pytest.mark.parametrize("status", ["pending", "", None])
+def test_stored_post_rejects_invalid_status(status):
+    with pytest.raises(ValidationError):
+        StoredPost.model_validate({**STORED_POST, "status": status})
+
+
+@pytest.mark.parametrize("field", ["status", "status_updated_at", "created_at"])
+def test_stored_post_requires_field(field):
+    # StoredPost 固有の処理状態と日時は、省略すると必須項目のエラーになる。
+    payload = {key: value for key, value in STORED_POST.items() if key != field}
+
+    with pytest.raises(ValidationError) as exc_info:
+        StoredPost.model_validate(payload)
+
+    assert exc_info.value.errors()[0]["loc"] == (field,)
+    assert exc_info.value.errors()[0]["type"] == "missing"
+
+
+@pytest.mark.parametrize("field", ["status_updated_at", "created_at"])
+def test_stored_post_rejects_datetime_without_timezone(field):
+    # タイムゾーンのない日時は、日本時間かUTCか区別できないので拒否する。
+    with pytest.raises(ValidationError):
+        StoredPost.model_validate({**STORED_POST, field: "2026-11-08T09:00:00"})
+
+
+@pytest.mark.parametrize("value", ["2026-11-08T00:00:00Z", "2026-11-08T00:00:00+00:00"])
+@pytest.mark.parametrize("field", ["status_updated_at", "created_at"])
+def test_stored_post_accepts_utc_datetime(field, value):
+    model = StoredPost.model_validate({**STORED_POST, field: value})
+
+    assert getattr(model, field).utcoffset().total_seconds() == 0
+
+
+@pytest.mark.parametrize("field", ["status_updated_at", "created_at"])
+def test_stored_post_rejects_non_utc_datetime(field):
+    # JST などで送られても変換せずに拒否し、保存する日時を UTC にそろえる。
+    with pytest.raises(ValidationError):
+        StoredPost.model_validate({**STORED_POST, field: "2026-11-08T09:00:00+09:00"})
