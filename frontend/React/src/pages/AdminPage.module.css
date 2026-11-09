@@ -239,6 +239,25 @@
   gap: var(--space-3);
 }
 
+/* After a 409: the text another admin published, quoted above the draft (like the candidate
+   cards' 公開中 reply) so the two can be compared. */
+.latest {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--g-blue-light);
+  border-left: 3px solid var(--color-ink-soft);
+  border-radius: var(--radius-sm);
+}
+
+.latestLabel {
+  color: var(--color-ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .textarea {
   width: 100%;
   padding: var(--space-3) var(--space-4);

@@ -327,6 +327,46 @@ def test_filters_candidates(client, query, expected):
     assert {c["id"] for c in response.json()} == expected
 
 
+@pytest.mark.parametrize(
+    ("recorded", "changed"),
+    [("current", False), ("older", True), (None, False)],
+    ids=["same-version", "rule-changed", "not-recorded"],
+)
+def test_flags_candidates_whose_rule_changed_since_generation(
+    client, repository, recorded, changed
+):
+    # 機能B が記録した「Gemini が参照したルールの版」と今の版を比べる。
+    version = {"current": version_of(repository), "older": "0123456789abcdef"}
+    repository.candidates["post_1_2"] = repository.candidates["post_1_2"].model_copy(
+        update={"target_rule_version": version.get(recorded)}
+    )
+
+    body = {
+        c["id"]: c for c in client.get("/api/admin/candidates", headers=AUTH).json()
+    }
+
+    assert body["post_1_2"]["rule_changed_since_generated"] is changed
+    assert body["post_1_1"]["rule_changed_since_generated"] is False  # add
+
+
+def test_flag_appears_after_the_rule_is_edited(client, repository):
+    repository.candidates["post_1_2"] = repository.candidates["post_1_2"].model_copy(
+        update={"target_rule_version": version_of(repository)}
+    )
+    edit(client, version_of(repository))
+
+    body = {
+        c["id"]: c for c in client.get("/api/admin/candidates", headers=AUTH).json()
+    }
+
+    assert body["post_1_2"]["rule_changed_since_generated"] is True
+
+
+def test_add_candidate_cannot_have_a_target_rule_version():
+    with pytest.raises(ValueError):
+        make_candidate("post_9_1", target_rule_version="0123456789abcdef")
+
+
 def test_rejects_unknown_filter_values(client):
     response = client.get("/api/admin/candidates?status=done", headers=AUTH)
 
@@ -383,7 +423,10 @@ def test_approving_add_creates_rule(client, repository, edited):
     assert (rule.region, rule.updated_at, rule.last_reviewed_at) == ("sakai", NOW, None)
     candidate = repository.candidates["post_1_1"]
     assert candidate.status == "approved"
-    assert candidate.statement.model_dump() == published
+    # 提案文はそのまま、公開した文は decided_statement に残る。
+    assert candidate.statement.model_dump() == statement("候補")
+    assert candidate.decided_statement.model_dump() == published
+    assert response.json()["candidate"]["decided_statement"] == published
     assert response.json()["rule"]["version"] == rule_version(rule)
 
 
@@ -431,13 +474,17 @@ def test_approving_update_replaces_rule_text(client, repository, edited):
     rule = repository.rules["rule_1"]
     assert rule.statement.model_dump() == (edited or statement("候補"))
     assert (rule.updated_at, rule.last_reviewed_at) == (NOW, None)
-    assert repository.candidates["post_1_2"].status == "approved"
+    candidate = repository.candidates["post_1_2"]
+    assert candidate.status == "approved"
+    assert candidate.statement.model_dump() == statement("候補")
+    assert candidate.decided_statement == rule.statement
     assert response.json()["rule"]["version"] == version_of(repository)
 
 
 def test_review_still_correct_only_moves_last_reviewed_at(
     client, repository, review_id
 ):
+    proposals = {review_id: repository.candidates[review_id].statement}
     response = decide(client, review_id, approve(repository))
 
     assert response.status_code == 200
@@ -446,20 +493,24 @@ def test_review_still_correct_only_moves_last_reviewed_at(
     assert (rule.updated_at, rule.last_reviewed_at) == (OLD, NOW)
     candidate = repository.candidates[review_id]
     assert candidate.status == "approved"
-    # 候補には、提案文ではなく確認した公開ルールの文が残る。
-    assert candidate.statement == rule.statement
+    # 提案文（投稿由来では公開文と違う）は残し、確認した公開ルールの文を別に残す。
+    assert candidate.statement == proposals[review_id]
+    assert candidate.decided_statement == rule.statement
 
 
 def test_review_edit_and_approve_also_moves_last_reviewed_at(
     client, repository, review_id
 ):
+    proposals = {review_id: repository.candidates[review_id].statement}
     response = decide(client, review_id, approve(repository, EDITED))
 
     assert response.status_code == 200
     rule = repository.rules["rule_1"]
     assert rule.statement.model_dump() == EDITED
     assert (rule.updated_at, rule.last_reviewed_at) == (NOW, NOW)
-    assert repository.candidates[review_id].statement.model_dump() == EDITED
+    candidate = repository.candidates[review_id]
+    assert candidate.statement == proposals[review_id]
+    assert candidate.decided_statement.model_dump() == EDITED
 
 
 def test_review_reject_changes_neither_date(client, repository, review_id):
@@ -479,6 +530,7 @@ def test_reject_leaves_rules_unchanged(client, repository, candidate_id):
     assert response.status_code == 200
     assert response.json()["rule"] is None
     assert repository.candidates[candidate_id].status == "rejected"
+    assert repository.candidates[candidate_id].decided_statement is None
     assert repository.rules == before
 
 

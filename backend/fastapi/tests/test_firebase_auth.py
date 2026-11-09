@@ -7,6 +7,8 @@
 import base64
 import io
 import json
+import math
+import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -178,6 +180,14 @@ def test_accepts_a_correctly_signed_token(key_server, project):
         {"auth_time": None},
         {"auth_time": "yesterday"},
         {"auth_time": True},
+        # 時刻が NaN・Infinity のときも、比較をすり抜けずに拒否する。
+        *(
+            {field: value}
+            for field in ("auth_time", "exp", "iat")
+            for value in (math.nan, math.inf, -math.inf)
+        ),
+        {"exp": True},
+        {"iat": "now"},
     ],
     ids=lambda o: ",".join(f"{k}={str(v)[:12]}" for k, v in o.items()),
 )
@@ -295,6 +305,44 @@ def test_cached_keys_keep_working_during_a_short_outage(key_server, project):
 
     assert verify(sign(claims(project))) == "admin_uid"
     assert key_server.fetches == 1
+
+
+# --- 初期化 -----------------------------------------------------------------------
+
+
+def test_first_requests_at_the_same_time_share_one_app(
+    key_server, project, monkeypatch
+):
+    """最初の検証が同時に来ても、SDK の初期化は 1 回だけで、すべて成功する。"""
+    import firebase_admin
+
+    original = firebase_admin.initialize_app
+    calls = []
+
+    def slow_initialize(*args, **kwargs):
+        calls.append(1)
+        time.sleep(0.2)  # 2 つ目のリクエストが「未初期化」と判断する隙間を広げる
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(firebase_admin, "initialize_app", slow_initialize)
+    start = threading.Barrier(4)
+    results = []
+
+    def first_request():
+        start.wait()
+        try:
+            results.append(FirebaseTokenVerifier(project)(sign(claims(project))))
+        except Exception as error:  # 失敗も結果として残す
+            results.append(repr(error))
+
+    threads = [threading.Thread(target=first_request) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert results == ["admin_uid"] * 4
+    assert len(calls) == 1
 
 
 # --- 設定 -------------------------------------------------------------------------

@@ -72,10 +72,15 @@ class AdminRule(Rule):
 
 
 class AdminCandidate(Candidate):
-    """管理画面向けの候補。元の投稿と対象ルールの現在の内容を添える。"""
+    """管理画面向けの候補。元の投稿と対象ルールの現在の内容を添える。
+
+    rule_changed_since_generated は、候補の生成時に Gemini が参照したルールの版
+    （target_rule_version）と今の版が違うとき True。版が記録されていない候補では False。
+    """
 
     post: CandidatePost | None = None
     current: CandidateTarget | None = None
+    rule_changed_since_generated: bool = False
 
 
 class CandidateDecisionResult(BaseModel):
