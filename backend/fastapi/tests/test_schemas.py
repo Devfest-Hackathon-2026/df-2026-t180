@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -32,7 +32,7 @@ RULE = {
     "id": "rule_001",
     "region": "sakai",
     "statement": STATEMENT,
-    "updated_at": "2026-11-07",
+    "updated_at": "2026-11-07T00:00:00Z",
 }
 
 
@@ -121,9 +121,9 @@ def test_post_defaults_reason_to_none():
     assert Post(**POST).reason is None
 
 
-def test_rule_parses_design_example_date():
+def test_rule_parses_utc_updated_at():
     # 設計書の更新日文字列が、Pythonの日付型に変換されることを確認する。
-    assert Rule(**RULE).updated_at == date(2026, 11, 7)
+    assert Rule(**RULE).updated_at == datetime(2026, 11, 7, tzinfo=timezone.utc)
 
 
 @pytest.mark.parametrize(
@@ -224,6 +224,7 @@ def test_stored_post_accepts_valid_status(status):
 
 @pytest.mark.parametrize("status", ["pending", "", None])
 def test_stored_post_rejects_invalid_status(status):
+    # 保存済み投稿に未定義の処理状態を指定すると拒否されることを確認する。
     with pytest.raises(ValidationError):
         StoredPost.model_validate({**STORED_POST, "status": status})
 
@@ -250,6 +251,7 @@ def test_stored_post_rejects_datetime_without_timezone(field):
 @pytest.mark.parametrize("value", ["2026-11-08T00:00:00Z", "2026-11-08T00:00:00+00:00"])
 @pytest.mark.parametrize("field", ["status_updated_at", "created_at"])
 def test_stored_post_accepts_utc_datetime(field, value):
+    # 保存済み投稿の日時が、UTC表記の違いにかかわらず受理されることを確認する。
     model = StoredPost.model_validate({**STORED_POST, field: value})
 
     assert getattr(model, field).utcoffset().total_seconds() == 0

@@ -1,8 +1,6 @@
-from datetime import date
-
 from pydantic import BaseModel, ConfigDict
 
-from schemas.common import LocalizedStatement, NonEmptyString
+from schemas.common import LocalizedStatement, NonEmptyString, UtcDatetime
 
 
 class Rule(BaseModel):
@@ -11,4 +9,5 @@ class Rule(BaseModel):
     id: NonEmptyString
     region: NonEmptyString
     statement: LocalizedStatement
-    updated_at: date
+    updated_at: UtcDatetime
+    last_reviewed_at: UtcDatetime | None = None
