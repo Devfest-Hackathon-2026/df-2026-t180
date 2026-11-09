@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router";
 import { AdminHeader } from "@/components/AdminHeader";
 import { CandidateCard, type Decision } from "@/components/CandidateCard";
@@ -9,7 +9,7 @@ import { Tag } from "@/components/Tag";
 import { type Candidate, type CandidateType, sampleCandidates, ta } from "@/content/admin";
 import { categories } from "@/content/copy";
 import { formatDate, rules as publishedRules } from "@/content/rules";
-import type { Localised, Rule } from "@/content/types";
+import type { Lang, Localised, Rule } from "@/content/types";
 import { href, readLang, type Params } from "@/content/url";
 import styles from "./AdminPage.module.css";
 
@@ -27,28 +27,14 @@ export function AdminPage() {
   const params: Params = Object.fromEntries(searchParams);
   const lang = readLang(params);
   const view = area === "rules" ? "rules" : "candidates";
-
-  return (
-    <main className={styles.page} lang={lang}>
-      <AdminHeader lang={lang} current={view} />
-      <h1 className="sr-only">{ta(view === "rules" ? "publishedRules" : "candidates", lang)}</h1>
-      {view === "candidates" ? (
-        <CandidatesView lang={lang} params={params} />
-      ) : (
-        <RulesView lang={lang} />
-      )}
-    </main>
-  );
-}
-
-function CandidatesView({ lang, params }: { lang: "ja" | "en"; params: Params }) {
+  // Kept here so decisions and counts survive switching to 公開ルール and back.
   const [items, setItems] = useState<Candidate[]>(sampleCandidates);
   const tab: CandidateType = types.includes(params.type as CandidateType)
     ? (params.type as CandidateType)
     : "add";
   const pending = (type: CandidateType) =>
     items.filter((c) => c.type === type && c.status === "pending").length;
-  const shown = items.filter((c) => c.type === tab);
+  const open = view === "candidates";
 
   function decide(id: string, decision: Decision, statement?: Localised) {
     setItems((all) =>
@@ -70,24 +56,60 @@ function CandidatesView({ lang, params }: { lang: "ja" | "en"; params: Params })
   }
 
   return (
-    <>
-      <nav className={styles.tabs} aria-label={ta("candidates", lang)}>
-        {types.map((type) => (
-          <Link
-            key={type}
-            className={styles.tab}
-            data-type={type}
-            to={href("/admin/candidates", params, { type })}
-            aria-current={type === tab ? "page" : undefined}
-            replace
-          >
-            {ta(typeLabel[type], lang)}
-            <span className={styles.count}>{pending(type)}</span>
-          </Link>
-        ))}
-      </nav>
+    <main className={styles.page} lang={lang}>
+      <AdminHeader lang={lang} current={view} />
+      <h1 className="sr-only">{ta(open ? "candidates" : "publishedRules", lang)}</h1>
 
-      {shown.length > 0 && shown.every((c) => c.status !== "pending") && (
+      {/* Candidate filters roll down under 候補 and roll away on 公開ルール. */}
+      <div className={styles.filters} data-open={open || undefined} inert={!open}>
+        <div className={styles.filtersInner}>
+          <nav
+            className={styles.tabs}
+            aria-label={ta("candidates", lang)}
+            style={{ "--active": types.indexOf(tab) } as CSSProperties}
+          >
+            {types.map((type) => (
+              <Link
+                key={type}
+                className={styles.tab}
+                to={href("/admin/candidates", params, { type })}
+                aria-current={open && type === tab ? "page" : undefined}
+                replace
+              >
+                {ta(typeLabel[type], lang)}
+                <span className={styles.count}>{pending(type)}</span>
+              </Link>
+            ))}
+            <span className={styles.indicator} aria-hidden="true" />
+          </nav>
+        </div>
+      </div>
+
+      {open ? (
+        <CandidatesView
+          lang={lang}
+          items={items.filter((c) => c.type === tab)}
+          onDecide={decide}
+          onUndo={undo}
+        />
+      ) : (
+        <RulesView lang={lang} />
+      )}
+    </main>
+  );
+}
+
+type CandidatesProps = {
+  lang: Lang;
+  items: Candidate[];
+  onDecide: (id: string, decision: Decision, statement?: Localised) => void;
+  onUndo: (id: string) => void;
+};
+
+function CandidatesView({ lang, items, onDecide, onUndo }: CandidatesProps) {
+  return (
+    <>
+      {items.length > 0 && items.every((c) => c.status !== "pending") && (
         <div className={styles.empty} role="status">
           <Mascot size={72} />
           <p>{ta("noneLeft", lang)}</p>
@@ -95,15 +117,15 @@ function CandidatesView({ lang, params }: { lang: "ja" | "en"; params: Params })
       )}
 
       <ul className={styles.list}>
-        {shown.map((c) => (
-          <CandidateCard key={c.id} candidate={c} lang={lang} onDecide={decide} onUndo={undo} />
+        {items.map((c) => (
+          <CandidateCard key={c.id} candidate={c} lang={lang} onDecide={onDecide} onUndo={onUndo} />
         ))}
       </ul>
     </>
   );
 }
 
-function RulesView({ lang }: { lang: "ja" | "en" }) {
+function RulesView({ lang }: { lang: Lang }) {
   const [items, setItems] = useState<Rule[]>(publishedRules);
   const [editing, setEditing] = useState<string>();
   const [draft, setDraft] = useState<Localised>({ ja: "", en: "" });

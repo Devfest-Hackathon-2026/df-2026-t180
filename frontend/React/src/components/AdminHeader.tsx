@@ -3,6 +3,7 @@ import { ta } from "@/content/admin";
 import type { Lang } from "@/content/types";
 import { href } from "@/content/url";
 import { BrandMark } from "./BrandMark";
+import { Icon } from "./Icon";
 import { LanguageSwitch } from "./LanguageSwitch";
 import { Tag } from "./Tag";
 import styles from "./AdminHeader.module.css";
@@ -35,8 +36,13 @@ export function AdminHeader({ lang, current }: Props) {
       <div className={styles.end}>
         <LanguageSwitch />
         {current && (
-          <Link className={styles.signOut} to={href("/admin", langParam)}>
-            {ta("signOut", lang)}
+          <Link
+            className={styles.signOut}
+            to={href("/admin", langParam)}
+            aria-label={ta("signOut", lang)}
+            title={ta("signOut", lang)}
+          >
+            <Icon name="signOut" size={22} />
           </Link>
         )}
       </div>
