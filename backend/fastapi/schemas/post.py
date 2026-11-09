@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from schemas.common import NonEmptyString, UtcDatetime
+from schemas.common import Location, NonEmptyString, UtcDatetime
 
 
 class Post(BaseModel):
@@ -12,6 +12,7 @@ class Post(BaseModel):
     text: NonEmptyString
     region: NonEmptyString
     reason: NonEmptyString | None = None
+    location: Location | None = None
 
 
 class StoredPost(Post):
