@@ -1,0 +1,114 @@
+.root {
+  position: relative;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4) 0 var(--space-5);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+/* Same focus language as the other fields: lift with the hard shadow, no ring. */
+.field:focus-visible,
+.root[data-open] .field {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.field[aria-invalid] {
+  background: var(--g-red-light);
+}
+
+.value[data-placeholder] {
+  color: var(--color-ink-soft);
+}
+
+.chevron {
+  display: grid;
+  place-items: center;
+  rotate: 90deg;
+  transition: rotate var(--duration-slow) var(--ease-spring);
+}
+
+.root[data-open] .chevron {
+  rotate: -90deg;
+}
+
+/* The list opens directly under the field, same width, in the app's card style. */
+.list {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-hard);
+  transform-origin: top center;
+  /* Lifted with the open field so their edges stay in line. */
+  translate: -2px -2px;
+  animation: drop var(--duration-slow) var(--ease-spring);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 var(--space-3) 0 var(--space-4);
+  font-size: 16px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.option[data-active] {
+  background: var(--g-yellow-light);
+}
+
+.option[aria-selected="true"] {
+  font-weight: 600;
+}
+
+.check {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--color-on-ink);
+  background: var(--color-ink);
+  border-radius: 50%;
+}
+
+.check svg {
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    scale: 1 0.92;
+    translate: -2px -8px;
+  }
+}

@@ -1,20 +1,21 @@
-import type { CSSProperties } from "react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AppNav } from "@/components/AppNav";
+import { BottomBar } from "@/components/BottomBar";
 import { BrandMark } from "@/components/BrandMark";
 import { Icon } from "@/components/Icon";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { LocationButton } from "@/components/LocationButton";
-import { MapMarker } from "@/components/MapMarker";
-import { MapPlaceholder } from "@/components/MapPlaceholder";
+import { MapView, type MapPin } from "@/components/MapView";
 import { SearchBar } from "@/components/SearchBar";
 import { PlaceSheet } from "@/components/PlaceSheet";
 import { StateCard } from "@/components/StateCard";
 import { Tag } from "@/components/Tag";
 import { appName, categoryOrder, t } from "@/content/copy";
 import { findRegion, pinnedRules, regions, rules } from "@/content/rules";
-import type { Category, Region } from "@/content/types";
+import type { Category, LatLng, Region } from "@/content/types";
 import { href, readLang, type Params } from "@/content/url";
+import { distanceKm, isDemoLocation, useMyLocation } from "@/hooks/useMyLocation";
 import styles from "./HomePage.module.css";
 
 function searchRegions(query: string): Region[] {
@@ -22,7 +23,7 @@ function searchRegions(query: string): Region[] {
   return regions.filter((region) => {
     const names = [region.name.ja, region.name.en];
     const pins = pinnedRules.filter((rule) => rule.region === region.id);
-    pins.forEach((rule) => names.push(rule.pin.name.ja, rule.pin.name.en));
+    pins.forEach((rule) => names.push(rule.place.ja, rule.place.en));
     return names.some((name) => name.toLowerCase().includes(needle));
   });
 }
@@ -53,47 +54,61 @@ export function HomePage() {
   const sheetOpen = Boolean(sheetRegion) && !isLoading && !isError;
   const here = (patch: Params) => href("/", params, patch);
 
+  const region = sheetRegion ?? regions[0];
+
+  // The visitor's location. URL state=denied still previews the refused state for reviewers.
+  const me = useMyLocation();
+  const locationStatus = state === "denied" ? "denied" : me.status;
+  // The map follows the newest request: "go to me" (location button) or "back to the region".
+  const [back, setBack] = useState<{ center: LatLng; zoom?: number; key: number }>();
+  const goToMe =
+    me.focus && me.position
+      ? { center: me.position, zoom: isDemoLocation() ? 15 : 16, key: me.focus }
+      : undefined;
+  const flyTo = [goToMe, back]
+    .filter((target) => target !== undefined)
+    .sort((a, b) => b.key - a.key)[0];
+  const farFromRegion = Boolean(me.position) && distanceKm(me.position!, region.center) > 15;
+  // Where the map is centred, reported when it comes to rest. The location button uses it to tell
+  // "showing the visitor" from "moved elsewhere" (back to the region, or panned away).
+  const [mapCentre, setMapCentre] = useState<LatLng>();
+  const showingMe = Boolean(
+    me.position && (mapCentre ? distanceKm(mapCentre, me.position) < 0.05 : flyTo === goToMe),
+  );
+  const onLocate = () => me.toggle(showingMe);
+
   const controls = (
     <>
       <span className={styles.wordmark} aria-hidden="true">
         {appName[lang]}
       </span>
-      <LocationButton lang={lang} denied={state === "denied"} />
+      <LocationButton lang={lang} status={locationStatus} onClick={onLocate} />
     </>
   );
-
-  const canvasStyle = selected
-    ? ({
-        "--pan-x": `${50 - selected.pin.x}%`,
-        "--pan-y": `${50 - selected.pin.y}%`,
-      } as CSSProperties)
-    : undefined;
+  const pins: MapPin[] = pinnedRules.map((rule) => ({
+    id: rule.id,
+    name: rule.place[lang],
+    category: rule.category,
+    location: rule.location,
+    to: here({ ...noSheet, spot: rule.id }),
+  }));
 
   return (
     <main className={styles.shell} lang={lang} data-sheet={sheetOpen ? sheetMode : undefined}>
-      <div className={styles.mapRegion} data-loading={isLoading || undefined}>
-        {!isError && (
-          <div
-            className={styles.canvas}
-            data-panned={selected ? "true" : undefined}
-            style={canvasStyle}
-          >
-            <MapPlaceholder lang={lang} />
-            {!isLoading &&
-              pinnedRules.map((rule) => (
-                <MapMarker
-                  key={rule.id}
-                  pin={rule.pin}
-                  category={rule.category}
-                  lang={lang}
-                  to={here({ ...noSheet, spot: rule.id })}
-                  selected={selected?.id === rule.id}
-                  dimmed={isEmpty}
-                />
-              ))}
-          </div>
-        )}
-      </div>
+      {!isError && (
+        <MapView
+          lang={lang}
+          center={region.center}
+          zoom={region.zoom}
+          pins={pins}
+          selectedId={selected?.id}
+          dimmed={isEmpty}
+          loading={isLoading}
+          you={me.position}
+          flyTo={flyTo}
+          onCenterChange={setMapCentre}
+        />
+      )}
 
       <header className={styles.top}>
         <div className={styles.bar}>
@@ -108,7 +123,27 @@ export function HomePage() {
         </div>
 
         <div className={styles.under}>
-          {state === "denied" && (
+          {me.status === "unavailable" && state !== "denied" && (
+            <p className={styles.denied} role="status">
+              <Icon name="locateOff" size={18} />
+              <strong>{t("locateFailed", lang)}</strong>
+            </p>
+          )}
+
+          {farFromRegion && flyTo === goToMe && !sheetOpen && (
+            <button
+              type="button"
+              className={styles.backTo}
+              onClick={() => setBack({ center: region.center, zoom: region.zoom, key: Date.now() })}
+            >
+              <Icon name="back" size={18} />
+              {lang === "ja"
+                ? `${region.name.ja}${t("backTo", lang)}`
+                : `${t("backTo", lang)}${region.name.en}`}
+            </button>
+          )}
+
+          {locationStatus === "denied" && (
             <p className={styles.denied}>
               <Icon name="locateOff" size={18} />
               <span>
@@ -183,6 +218,7 @@ export function HomePage() {
           expandTo={here({ sheet: "full", tab })}
           collapseTo={selected ? here({ sheet: undefined }) : here(noSheet)}
           above={controls}
+          me={me.position}
         />
       ) : null}
 
@@ -190,9 +226,20 @@ export function HomePage() {
         <div className={styles.controls}>{controls}</div>
       </div>
 
-      <div className={styles.nav}>
-        <AppNav lang={lang} current="explore" />
-      </div>
+      {/* Phones: the shared bottom row, with the wordmark on top and the location button. */}
+      <BottomBar
+        className={styles.bottom}
+        lang={lang}
+        current="explore"
+        above={
+          <span className={`${styles.wordmark} ${styles.wordmarkAbove}`} aria-hidden="true">
+            {appName[lang]}
+          </span>
+        }
+        action={
+          <LocationButton lang={lang} status={locationStatus} onClick={onLocate} size="row" />
+        }
+      />
     </main>
   );
 }

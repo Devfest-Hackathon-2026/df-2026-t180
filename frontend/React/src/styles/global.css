@@ -10,6 +10,14 @@ body {
   min-height: 100%;
 }
 
+/*
+ * No browser tap box on phones: every control has its own pressed and hover states. The box sat
+ * over a pill while its thumb slid (the page now changes after the slide), and blinked off.
+ */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-ink);
@@ -26,7 +34,9 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
   color: inherit;
 }

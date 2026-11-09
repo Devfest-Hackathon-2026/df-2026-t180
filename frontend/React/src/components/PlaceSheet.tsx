@@ -9,10 +9,10 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { categories, t } from "@/content/copy";
-import type { Category, Lang, Pin, Region, Rule } from "@/content/types";
+import type { Category, Lang, LatLng, PinnedRule, Region } from "@/content/types";
 import type { Params } from "@/content/url";
 import { CategoryIcon } from "./CategoryIcon";
-import { GuideContent } from "./GuideContent";
+import { GuideContent, GuideTabs } from "./GuideContent";
 import { Icon } from "./Icon";
 import { Tag } from "./Tag";
 import styles from "./PlaceSheet.module.css";
@@ -22,7 +22,7 @@ export type SheetMode = "half" | "full";
 type Props = {
   mode: SheetMode;
   region: Region;
-  rule?: Rule & { pin: Pin };
+  rule?: PinnedRule;
   tab: Category;
   lang: Lang;
   linkTo: (patch: Params) => string;
@@ -32,6 +32,8 @@ type Props = {
   collapseTo: string;
   /** Controls that ride on top of the half sheet on phones, such as the location button. */
   above?: ReactNode;
+  /** The visitor's position, used to sort place rules when no pin is open. */
+  me?: LatLng;
 };
 
 type Target = "full" | "half" | "closed";
@@ -43,7 +45,7 @@ const desktop = () => window.matchMedia("(min-width: 900px)").matches;
  * arrow) expands it into the regional guide, dragging down or × returns to the map. No page change.
  */
 export function PlaceSheet(props: Props) {
-  const { mode, region, rule, tab, lang, linkTo, closeTo, expandTo, collapseTo, above } = props;
+  const { mode, region, rule, tab, lang, linkTo, closeTo, expandTo, collapseTo, above, me } = props;
   const navigate = useNavigate();
   const sheetRef = useRef<HTMLElement>(null);
   const grabRef = useRef<HTMLDivElement>(null);
@@ -64,13 +66,19 @@ export function PlaceSheet(props: Props) {
     return () => observer.disconnect();
   }, [rule?.id, lang]);
 
+  // Back to the short card: the scroller keeps its scroll position even with overflow hidden, so
+  // reset it, or guide rows (and their links) would show in place of the summary and arrow.
+  useLayoutEffect(() => {
+    if (mode === "half" && scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [mode]);
+
   // Opening the full guide brings the tapped rule into view inside the sheet.
   useEffect(() => {
     const scroller = scrollerRef.current;
     if (mode !== "full" || !scroller) return;
     const focused = rule ? scroller.querySelector<HTMLElement>(`[id="${rule.id}"]`) : null;
     const bottom = focused ? focused.offsetTop + focused.offsetHeight : 0;
-    // Only scroll when the rule would otherwise be hidden; keep the region intro in view if it fits.
+    // Only scroll when the rule would otherwise be hidden; otherwise start at the top.
     scroller.scrollTop =
       focused && bottom > scroller.clientHeight
         ? Math.max(0, focused.offsetTop - scroller.clientHeight / 3)
@@ -154,7 +162,11 @@ export function PlaceSheet(props: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [closeTo, navigate]);
 
-  const title = rule ? rule.pin.name[lang] : region.name[lang];
+  // Title is the place (or the area when the guide opens from search); the line under it is
+  // 「堺市 ・ 大阪府」 / "Sakai · Osaka", or just the prefecture under an area title.
+  const title = rule ? rule.place[lang] : region.name[lang];
+  const sep = lang === "ja" ? " ・ " : " · ";
+  const subtitle = rule ? `${region.name[lang]}${sep}${region.parent[lang]}` : region.parent[lang];
 
   return (
     <section
@@ -201,7 +213,16 @@ export function PlaceSheet(props: Props) {
         <h2 className={styles.title} id="sheet-title">
           {title}
         </h2>
+        <p className={styles.parent}>{subtitle}</p>
       </div>
+
+      {/* Full sheet: the tabs are part of the fixed header and never scroll. Kept out of the
+          measured header so the short card's height is unchanged. */}
+      {mode === "full" && (
+        <div className={styles.tabsBar}>
+          <GuideTabs region={region} lang={lang} tab={tab} linkTo={linkTo} />
+        </div>
+      )}
 
       <div ref={scrollerRef} className={styles.scroller}>
         {rule && (
@@ -218,14 +239,15 @@ export function PlaceSheet(props: Props) {
             </button>
           </div>
         )}
-        <div className={styles.guide}>
+        {/* In the short card only the arrow opens the guide; its content can't be tapped or focused. */}
+        <div className={styles.guide} inert={mode === "half"}>
           <GuideContent
             region={region}
             lang={lang}
             tab={tab}
             focusedId={rule?.id}
-            showName={Boolean(rule)}
             linkTo={linkTo}
+            origin={rule?.location ?? me}
           />
         </div>
       </div>

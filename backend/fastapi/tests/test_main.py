@@ -11,3 +11,5 @@ def test_app_starts_and_serves_openapi():
     assert response.status_code == 200
     assert response.json()["info"]["title"] == "Regional Rules API"
     assert "/api/posts" in response.json()["paths"]
+    assert "/api/regions" in response.json()["paths"]
+    assert "/api/regions/{region_id}/rules" in response.json()["paths"]

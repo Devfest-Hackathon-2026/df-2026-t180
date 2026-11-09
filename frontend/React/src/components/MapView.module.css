@@ -1,0 +1,79 @@
+.region {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  container-type: size;
+  background: var(--map-land);
+}
+
+.google {
+  width: 100%;
+  height: 100%;
+}
+
+/* The visitor, drawn as the mascot standing on their position, with a pulsing halo at its feet. */
+.you {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.youMascot {
+  position: relative;
+  width: 64px;
+  height: auto;
+  filter: drop-shadow(0 2px 0 var(--color-surface));
+}
+
+/* The mascot's feet sit at x=60 of its 140-wide drawing (the flag adds width on the right). */
+.halo {
+  position: absolute;
+  bottom: -6px;
+  left: calc(60 / 140 * 100%);
+  width: 34px;
+  height: 14px;
+  background: rgb(66 133 244 / 0.35);
+  border: 2px solid var(--g-blue);
+  border-radius: 50%;
+  translate: -50% 0;
+}
+
+.halo::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--g-blue);
+  border-radius: 50%;
+  animation: halo 1800ms var(--ease-out) infinite;
+}
+
+@keyframes halo {
+  to {
+    opacity: 0;
+    scale: 2.2;
+  }
+}
+
+/* Placeholder canvas: larger than the screen so it can pan to centre the selected pin. */
+.canvas {
+  --pan-x: 0%;
+  --pan-y: 0%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(max(100cqw, 100cqh) * 1.25);
+  aspect-ratio: 1;
+  translate: calc(-50% + var(--pan-x)) calc(-50% + var(--pan-y));
+  transition: translate var(--duration-pan) var(--ease-out);
+}
+
+.region[data-loading] {
+  animation: pulse 1400ms ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
