@@ -43,14 +43,15 @@ def _verifier() -> TokenVerifier:
         ) from None
 
 
-def require_admin(
+def signed_in_uid(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     verifier: Annotated[TokenVerifier, Depends(_verifier)],
-    repository: Repository,
 ) -> str:
-    """Authorization: Bearer <Firebase ID トークン> を検証し、管理者の UID を返す。
+    """Authorization: Bearer <Firebase ID トークン> を検証して UID を返す。
 
-    トークンがない・無効なら 401、有効でも admins に登録がなければ 403。
+    トークンがない・無効なら 401。
+
+    DB に触れる前に判定するため、管理者の確認（require_admin）とは分けている。
     """
     unauthorized = HTTPException(
         status.HTTP_401_UNAUTHORIZED,
@@ -60,9 +61,16 @@ def require_admin(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise unauthorized
     try:
-        uid = verifier(credentials.credentials)
+        return verifier(credentials.credentials)
     except InvalidToken:
         raise unauthorized from None
+
+
+def require_admin(
+    uid: Annotated[str, Depends(signed_in_uid)],
+    repository: Repository,
+) -> str:
+    """ログイン済みの UID が admins に登録されているか確認する。なければ 403。"""
     if not repository.is_admin(uid):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Not an admin")
     return uid

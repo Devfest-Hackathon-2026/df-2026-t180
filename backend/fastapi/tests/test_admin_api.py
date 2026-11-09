@@ -181,6 +181,19 @@ def test_requires_valid_token(client, repository, method, path, body, headers):
     assert repository.commits == 0
 
 
+def test_checks_token_before_touching_the_database(client):
+    # トークンが無効なら、DB の準備（Firestore への接続）より先に 401 を返す。
+    def unavailable():
+        raise RuntimeError("database unavailable")
+
+    app.dependency_overrides[get_admin_repository] = unavailable
+    response = client.get(
+        "/api/admin/candidates", headers={"Authorization": "Bearer wrong"}
+    )
+
+    assert response.status_code == 401
+
+
 @pytest.mark.parametrize(("method", "path", "body"), ENDPOINTS)
 def test_rejects_signed_in_non_admin(client, repository, method, path, body):
     headers = {"Authorization": f"Bearer {VISITOR_TOKEN}"}
