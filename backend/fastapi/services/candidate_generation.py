@@ -18,6 +18,7 @@ from schemas.candidate import Candidate
 from schemas.common import LocalizedStatement, NonEmptyString
 from schemas.post import Post, StoredPost
 from schemas.rule import Rule
+from services.rule_versions import rule_version
 
 STALE_RULE_YEARS = 3
 
@@ -209,12 +210,21 @@ def run_candidate_batch(
                     and draft.target_rule_id not in region_rules
                 ):
                     raise ValueError("unknown rule target")
+                # Gemini が根拠にしたルールの版を、Gemini に渡したその Rule から記録する
+                # （生成の完了時点の最新版ではない）。管理画面はこれが今の版と違えば
+                # 「生成後にルールが変更されています」と表示する（#39）。
+                target = (
+                    region_rules[draft.target_rule_id]
+                    if draft.target_rule_id is not None
+                    else None
+                )
                 generated.append(
                     Candidate(
                         id=f"{post_ids[index]}_{number}",
                         post_id=post_ids[index],
                         region=post.region,
                         status="pending",
+                        target_rule_version=rule_version(target) if target else None,
                         # 位置は Gemini に作らせず、元の Post から引き継ぐ。
                         location=post.location,
                         **draft.model_dump(),
@@ -271,6 +281,8 @@ def run_candidate_batch(
             status="pending",
             type="review",
             target_rule_id=rule.id,
+            # 経年判定に使ったルールの版（#39）。
+            target_rule_version=rule_version(rule),
             location=rule.location,
             review_reason=(
                 f"最終更新または最終確認から{stale_years}年以上経過しています。"

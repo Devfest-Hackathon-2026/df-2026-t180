@@ -33,13 +33,12 @@ decided_statement に入れる。review の「問題なし」では確認した�
 last_reviewed_at を進めるため、どの書き込みでも version は変わる。
 """
 
-import hashlib
-import json
 from datetime import datetime
 
 from schemas.admin import CandidateDecision, RuleEdit
 from schemas.candidate import Candidate
 from schemas.rule import Rule
+from services.rule_versions import rule_version
 
 
 class DecisionConflict(ValueError):
@@ -48,12 +47,6 @@ class DecisionConflict(ValueError):
 
 class DecisionInvalid(ValueError):
     """リクエストの内容が足りない（expected_version がないなど）。422。"""
-
-
-def rule_version(rule: Rule) -> str:
-    """ルールの保存内容から計算する版。内容が 1 か所でも変わると値が変わる。"""
-    data = json.dumps(rule.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
-    return hashlib.sha256(data.encode()).hexdigest()[:16]
 
 
 def _check_version(rule: Rule, expected_version: str | None) -> None:
