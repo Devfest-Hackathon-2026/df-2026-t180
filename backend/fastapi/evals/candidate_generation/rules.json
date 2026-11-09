@@ -1,0 +1,18 @@
+{
+  "rules": [
+    {"id": "rule_001", "region": "sakai", "statement": {"ja": "住宅街の細い路地では、広がらずに歩いてください。", "en": "Please don't walk side by side in narrow residential lanes."}, "updated_at": "2026-11-06T00:00:00Z"},
+    {"id": "rule_002", "region": "sakai", "statement": {"ja": "夜9時以降は住宅街で静かにお願いします。", "en": "Please keep quiet in residential streets after 9 pm."}, "updated_at": "2026-11-04T00:00:00Z"},
+    {"id": "rule_003", "region": "sakai", "statement": {"ja": "芝生広場にゴミを残さないでください。", "en": "Please leave no rubbish on the park lawns."}, "updated_at": "2026-11-01T00:00:00Z"},
+    {"id": "rule_004", "region": "sakai", "statement": {"ja": "町にゴミ箱はほとんどありません。ゴミは持ち帰ってください。", "en": "There are few bins in town. Please take your rubbish with you."}, "updated_at": "2026-10-28T00:00:00Z"},
+    {"id": "rule_005", "region": "sakai", "statement": {"ja": "駅前のバス乗り場は行き先ごとに分かれています。乗る前に番号を確認してください。", "en": "Bus stops outside the station are split by destination. Check the stop number first."}, "updated_at": "2026-11-07T00:00:00Z"},
+    {"id": "rule_006", "region": "sakai", "statement": {"ja": "路線バスでは交通系ICカードが使えます。", "en": "Transit IC cards work on local buses."}, "updated_at": "2026-11-02T00:00:00Z"},
+    {"id": "rule_007", "region": "sakai", "statement": {"ja": "駅前の道路に車を停めないでください。", "en": "Please don't park on the road outside the station."}, "updated_at": "2026-10-30T00:00:00Z"},
+    {"id": "rule_008", "region": "sakai", "statement": {"ja": "現金のみのお店もあります。", "en": "Some shops take cash only."}, "updated_at": "2026-11-05T00:00:00Z"},
+    {"id": "rule_009", "region": "sakai", "statement": {"ja": "夜間は公園の駐車場が閉まります。", "en": "The park car park closes at night."}, "updated_at": "2026-11-03T00:00:00Z"},
+    {"id": "rule_010", "region": "sakai", "statement": {"ja": "商店街のお店の前に座り込まないでください。", "en": "Please don't sit down in front of shops in the shopping street."}, "updated_at": "2026-10-26T00:00:00Z"}
+  ],
+  "candidates": [
+    {"id": "post_a_1", "source": "post", "post_id": "post_a", "region": "sakai", "statement": {"ja": "商店街の中では自転車を降りて押して歩いてください。", "en": "Please get off and walk your bicycle in the shopping street."}, "status": "pending", "type": "add"},
+    {"id": "post_b_1", "source": "post", "post_id": "post_b", "region": "sakai", "statement": {"ja": "大仙公園の芝生広場ではバーベキューをしないでください。", "en": "Please don't have barbecues on the Daisen Park lawn."}, "status": "pending", "type": "add"}
+  ]
+}
