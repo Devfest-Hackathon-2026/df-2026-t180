@@ -13,12 +13,13 @@ STATEMENT = {
 }
 
 
-def make_rule(rule_id: str, region: str) -> Rule:
+def make_rule(rule_id: str, region: str, location: dict | None = None) -> Rule:
     return Rule(
         id=rule_id,
         region=region,
         statement=STATEMENT,
         updated_at="2026-11-07T00:00:00Z",
+        location=location,
     )
 
 
@@ -36,7 +37,7 @@ def client():
     fake = FakeRuleRepository(
         [
             make_rule("rule_001", "sakai"),
-            make_rule("rule_002", "sakai"),
+            make_rule("rule_002", "sakai", {"lat": 34.5738, "lng": 135.4795}),
             make_rule("rule_003", "kyoto"),
         ]
     )
@@ -57,7 +58,18 @@ def test_list_region_rules_returns_only_that_region(client):
         "statement": STATEMENT,
         "updated_at": "2026-11-07T00:00:00Z",
         "last_reviewed_at": None,
+        "location": None,
     }
+
+
+def test_list_region_rules_returns_location_only_for_pinned_rules(client):
+    # 地図にピンを立てるルールだけ location を持ち、地域全体のルールは None になる。
+    response = client.get("/api/regions/sakai/rules")
+
+    assert [rule["location"] for rule in response.json()] == [
+        None,
+        {"lat": 34.5738, "lng": 135.4795},
+    ]
 
 
 def test_list_region_rules_returns_empty_list_for_region_without_rules(client):

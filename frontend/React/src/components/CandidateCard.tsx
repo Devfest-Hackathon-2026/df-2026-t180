@@ -40,7 +40,8 @@ export function CandidateCard({ candidate: c, lang, onDecide, onUndo }: Props) {
         <Icon name={c.status === "rejected" ? "close" : "check"} size={18} strokeWidth={2.4} />
         <span className={styles.doneText}>
           <strong>{ta(done, lang)}</strong>
-          <span className={styles.doneStatement}>{c.statement[lang]}</span>
+          {/* What was published or confirmed, not necessarily the proposal. */}
+          <span className={styles.doneStatement}>{(c.decidedStatement ?? c.statement)[lang]}</span>
         </span>
         {onUndo && (
           <button type="button" className={styles.undo} onClick={() => onUndo(c.id)}>
@@ -62,6 +63,11 @@ export function CandidateCard({ candidate: c, lang, onDecide, onUndo }: Props) {
       </div>
 
       {c.reviewReason && <p className={styles.system}>{c.reviewReason}</p>}
+      {c.ruleChangedSinceGenerated && (
+        <p className={styles.warning} role="note">
+          {ta("ruleChangedSinceGenerated", lang)}
+        </p>
+      )}
 
       {c.post && (
         <div className={styles.message} data-from="resident">

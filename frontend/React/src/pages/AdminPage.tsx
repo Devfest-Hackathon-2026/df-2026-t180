@@ -35,6 +35,11 @@ const today = () => new Date().toISOString().slice(0, 10);
 const UNDO_MS = 5000;
 
 type Load = "loading" | "ready" | "failed";
+/** Why a save didn't happen: an error, or someone else changed the rule first (409). */
+type Alert = "saveFailed" | "changed";
+
+const alertFor = (error: unknown): Alert =>
+  error instanceof AdminApiError && error.status === 409 ? "changed" : "saveFailed";
 
 /**
  * Admin (機能D): review the candidate queue and edit published rules. With Firebase configured
@@ -52,7 +57,7 @@ export function AdminPage() {
   const [items, setItems] = useState<Candidate[]>(adminLive ? [] : sampleCandidates);
   const [load, setLoad] = useState<Load>(adminLive ? "loading" : "ready");
   const [reload, setReload] = useState(0);
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [alert, setAlert] = useState<Alert>();
   // Decisions already sent can no longer be undone.
   const [sent, setSent] = useState<ReadonlySet<string>>(new Set());
   const originals = useRef(new Map<string, Candidate>());
@@ -132,14 +137,21 @@ export function AdminPage() {
     const original = items.find((c) => c.id === id);
     if (!original) return;
     originals.current.set(id, original);
-    setSaveFailed(false);
+    setAlert(undefined);
     setItems((all) =>
       all.map((c) =>
         c.id === id
           ? {
               ...c,
               status: decision === "approve" ? "approved" : "rejected",
-              statement: statement ?? c.statement,
+              // Shown until the server answers: the edited text, the rule confirmed as still
+              // correct, or the proposal as published. The proposal itself is never replaced.
+              decidedStatement:
+                decision === "approve"
+                  ? (statement ??
+                    (c.type === "review" ? c.current?.statement : undefined) ??
+                    c.statement)
+                  : undefined,
             }
           : c,
       ),
@@ -149,8 +161,13 @@ export function AdminPage() {
     const send = () => {
       queued.current.delete(id);
       setSent((all) => new Set(all).add(id));
-      decideCandidate(id, decision, statement)
-        .then((decided) => setItems((all) => all.map((c) => (c.id === id ? decided : c))))
+      // Sends the rule version the admin saw when deciding (in `original`), never a newer one:
+      // if another approval changed the rule meanwhile, the server answers 409 and the queue
+      // reloads so the admin decides again on the latest text.
+      decideCandidate(original, decision, statement)
+        .then(({ candidate: decided }) =>
+          setItems((all) => all.map((c) => (c.id === id ? decided : c))),
+        )
         .catch((error) => {
           if (leave(error)) return;
           setSent((all) => {
@@ -159,8 +176,8 @@ export function AdminPage() {
             return next;
           });
           restore(id);
-          setSaveFailed(true);
-          // Someone else decided it meanwhile: fetch the queue again.
+          setAlert(alertFor(error));
+          // Someone else decided it or changed its rule meanwhile: fetch the queue again.
           if (error instanceof AdminApiError && error.status === 409) setReload((n) => n + 1);
         });
     };
@@ -211,9 +228,9 @@ export function AdminPage() {
           {ta("sampleData", lang)}
         </p>
       )}
-      {saveFailed && (
+      {alert && (
         <p className={styles.alert} role="alert">
-          {ta("saveFailed", lang)}
+          {ta(alert, lang)}
         </p>
       )}
 
@@ -302,6 +319,8 @@ type RuleRow = {
   id: string;
   statement: Localised;
   updatedAt: string;
+  /** From the admin API; sample rows have none. */
+  version?: string;
   category?: Category;
   place?: Localised;
 };
@@ -321,9 +340,13 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
   const [reload, setReload] = useState(0);
   const [editing, setEditing] = useState<string>();
   const [draft, setDraft] = useState<Localised>({ ja: "", en: "" });
+  // The version the draft was written against. Saving sends this, never a version loaded later.
+  const [base, setBase] = useState<string>();
+  // Someone else saved this rule first: the admin must choose how to continue before saving.
+  const [conflict, setConflict] = useState(false);
   const [saved, setSaved] = useState<string>();
   const [saving, setSaving] = useState(false);
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [alert, setAlert] = useState<Alert>();
 
   useEffect(() => {
     if (!adminLive) return;
@@ -343,23 +366,43 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
     };
   }, [reload, onLeave]);
 
-  async function save(id: string) {
-    setSaveFailed(false);
-    let updatedAt = today();
+  function startEditing(row: RuleRow) {
+    setDraft(row.statement);
+    setBase(row.version);
+    setConflict(false);
+    setEditing(row.id);
+    setSaved(undefined);
+  }
+
+  async function save(row: RuleRow, version = base) {
+    setAlert(undefined);
+    let saved: Pick<RuleRow, "statement" | "updatedAt" | "version"> = {
+      statement: draft,
+      updatedAt: today(),
+    };
     if (adminLive) {
       setSaving(true);
       try {
-        updatedAt = (await editRule(id, draft)).updatedAt;
+        const rule = await editRule(row.id, draft, version ?? "");
+        saved = { statement: rule.statement, updatedAt: rule.updatedAt, version: rule.version };
       } catch (error) {
         setSaving(false);
-        if (!onLeave(error)) setSaveFailed(true);
+        if (onLeave(error)) return;
+        setAlert(alertFor(error));
+        if (error instanceof AdminApiError && error.status === 409) {
+          // Changed by someone else: load their text and show it next to this draft. Saving is
+          // blocked until the admin either starts again from their text or replaces it on purpose.
+          setConflict(true);
+          setReload((n) => n + 1);
+        }
         return;
       }
       setSaving(false);
     }
-    setItems((all) => all.map((r) => (r.id === id ? { ...r, statement: draft, updatedAt } : r)));
+    setItems((all) => all.map((r) => (r.id === row.id ? { ...r, ...saved } : r)));
     setEditing(undefined);
-    setSaved(id);
+    setConflict(false);
+    setSaved(row.id);
   }
 
   if (load === "loading") return <Loading lang={lang} />;
@@ -376,9 +419,9 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
 
   return (
     <>
-      {saveFailed && (
+      {alert && (
         <p className={styles.alert} role="alert">
-          {ta("saveFailed", lang)}
+          {ta(alert, lang)}
         </p>
       )}
       <ul className={styles.rules}>
@@ -405,6 +448,16 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
 
             {editing === rule.id ? (
               <div className={styles.editor}>
+                {conflict && (
+                  <div className={styles.latest} aria-label={ta("latestPublished", lang)}>
+                    <p className={styles.latestLabel}>{ta("latestPublished", lang)}</p>
+                    {(["ja", "en"] as const).map((l) => (
+                      <p key={l} lang={l}>
+                        {rule.statement[l]}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 {(["ja", "en"] as const).map((l) => (
                   <label key={l} className={styles.editField}>
                     <span className={styles.langLabel}>{l === "ja" ? "JP" : "EN"}</span>
@@ -446,18 +499,46 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
                   <button
                     type="button"
                     className={styles.secondary}
-                    onClick={() => setEditing(undefined)}
+                    onClick={() => {
+                      setEditing(undefined);
+                      setConflict(false);
+                    }}
                   >
                     {ta("cancel", lang)}
                   </button>
-                  <button
-                    type="button"
-                    className={styles.primary}
-                    disabled={saving || !draft.ja.trim() || !draft.en.trim()}
-                    onClick={() => void save(rule.id)}
-                  >
-                    {ta("save", lang)}
-                  </button>
+                  {conflict ? (
+                    <>
+                      <button
+                        type="button"
+                        className={styles.secondary}
+                        disabled={saving}
+                        onClick={() => startEditing(rule)}
+                      >
+                        {ta("useLatest", lang)}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        disabled={saving || !draft.ja.trim() || !draft.en.trim()}
+                        // Replaces exactly the text shown above (its version), on purpose.
+                        onClick={() => {
+                          setBase(rule.version);
+                          void save(rule, rule.version);
+                        }}
+                      >
+                        {ta("overwrite", lang)}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.primary}
+                      disabled={saving || !draft.ja.trim() || !draft.en.trim()}
+                      onClick={() => void save(rule)}
+                    >
+                      {ta("save", lang)}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button
@@ -465,11 +546,7 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
                   className={styles.editIcon}
                   aria-label={`${ta("editRule", lang)}: ${rule.statement[lang]}`}
                   title={ta("editRule", lang)}
-                  onClick={() => {
-                    setDraft(rule.statement);
-                    setEditing(rule.id);
-                    setSaved(undefined);
-                  }}
+                  onClick={() => startEditing(rule)}
                 >
                   <Icon name="edit" size={20} />
                 </button>

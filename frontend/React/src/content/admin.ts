@@ -18,10 +18,20 @@ export type Candidate = {
   statement: Localised;
   targetRuleId?: string;
   reviewReason?: string;
+  /** The text the admin actually published or confirmed; `statement` stays Gemini's proposal. */
+  decidedStatement?: Localised;
+  /** The rule changed after Gemini wrote this proposal (from the rule version it read). */
+  ruleChangedSinceGenerated?: boolean;
   /** The resident's original post, for candidates that came from a post. */
   post?: { text: string; reason?: string; place?: string; createdAt: string };
   /** The published rule this candidate would change or re-check. */
-  current?: { statement: Localised; updatedAt: string; lastReviewedAt?: string };
+  current?: {
+    statement: Localised;
+    updatedAt: string;
+    lastReviewedAt?: string;
+    /** Sent back when approving, so the server can refuse if the rule changed meanwhile. */
+    version?: string;
+  };
 };
 
 export const sampleCandidates: Candidate[] = [
@@ -175,6 +185,17 @@ const strings = {
   saveFailed: {
     ja: "保存できませんでした。もう一度お試しください",
     en: "Couldn't save. Please try again",
+  },
+  changed: {
+    ja: "ほかの管理者が先に変更したため保存していません。最新の内容を読み込みました",
+    en: "Not saved: another admin changed this first. The latest version is now shown",
+  },
+  latestPublished: { ja: "公開中の最新の文", en: "Latest published text" },
+  useLatest: { ja: "最新の文で書き直す", en: "Edit the latest" },
+  overwrite: { ja: "この下書きで上書き", en: "Replace with my draft" },
+  ruleChangedSinceGenerated: {
+    ja: "この提案の作成後に公開ルールが変更されています。現在の公開文を確認してください",
+    en: "The rule changed after this was drafted. Check the current text",
   },
   retry: { ja: "再読み込み", en: "Reload" },
   sampleData: {
