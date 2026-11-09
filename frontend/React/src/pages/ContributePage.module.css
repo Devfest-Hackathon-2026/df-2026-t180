@@ -334,3 +334,13 @@
     padding-top: var(--space-8);
   }
 }
+
+/* Sample run: says plainly that nothing was sent. */
+.sample {
+  padding: 4px var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--g-grey-light);
+  border-radius: var(--radius-full);
+}

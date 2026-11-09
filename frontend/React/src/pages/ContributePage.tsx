@@ -1,5 +1,7 @@
 import { type FormEvent, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { adminLive as apiLive } from "@/api/adminAuth";
+import { sendPost } from "@/api/posts";
 import { BottomBar } from "@/components/BottomBar";
 import { BrandMark } from "@/components/BrandMark";
 import { Icon } from "@/components/Icon";
@@ -19,7 +21,8 @@ const MAX = 300;
 
 /**
  * Resident submission (機能A): text and area are required, reason and place are optional.
- * Sending is mocked here; it becomes POST /api/posts once the backend endpoint is ready.
+ * When the app is connected to the project (Firebase configured in .env), sending goes to
+ * POST /api/posts; otherwise it is a sample run and the thank-you screen says nothing was sent.
  */
 export function ContributePage() {
   const [searchParams] = useSearchParams();
@@ -35,6 +38,8 @@ export function ContributePage() {
   const [picking, setPicking] = useState(false);
   const [centre, setCentre] = useState<LatLng>();
   const [tried, setTried] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendFailed, setSendFailed] = useState(false);
   const regionRef = useRef<{ focus: () => void }>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
@@ -42,11 +47,24 @@ export function ContributePage() {
   const textError = tried && !text.trim();
   const pickRegion = regions.find((item) => item.id === region) ?? regions[0];
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setTried(true);
     if (!region) return regionRef.current?.focus();
     if (!text.trim()) return textRef.current?.focus();
+    if (sending) return;
+    if (apiLive) {
+      setSending(true);
+      setSendFailed(false);
+      try {
+        await sendPost({ region, text, reason });
+      } catch {
+        setSendFailed(true);
+        setSending(false);
+        return;
+      }
+      setSending(false);
+    }
     // Sent: clear everything so "Send another" starts from an empty form. (Switching language
     // doesn't come through here, so inputs are kept when the visitor changes JP/EN.)
     setRegion("");
@@ -67,6 +85,11 @@ export function ContributePage() {
           <Mascot size={150} />
           <h1 className={styles.doneTitle}>{t("thanksTitle", lang)}</h1>
           <p className={styles.doneBody}>{t("thanksBody", lang)}</p>
+          {!apiLive && (
+            <p className={styles.sample} role="note">
+              {t("sampleNotSent", lang)}
+            </p>
+          )}
           <div className={styles.doneActions}>
             <PillLink to={href("/", langParam)} icon="back" tone="plain">
               {t("backToMap", lang)}
@@ -88,7 +111,7 @@ export function ContributePage() {
       <form id="contribute-form" className={styles.form} onSubmit={onSubmit} noValidate>
         <h1 className={styles.title}>{t("formTitle", lang)}</h1>
 
-        {params.state === "error" && (
+        {(params.state === "error" || sendFailed) && (
           <StateCard
             title={t("sendFailed", lang)}
             body={t("sendFailedBody", lang)}
@@ -249,6 +272,8 @@ export function ContributePage() {
             form="contribute-form"
             className={styles.send}
             aria-label={t("submit", lang)}
+            aria-busy={sending || undefined}
+            disabled={sending}
           >
             <Icon name="send" size={24} strokeWidth={2.2} />
           </button>

@@ -83,6 +83,10 @@ const strings = {
     en: "Once an admin checks it, it will appear in the area guide",
   },
   postAnother: { ja: "もう1件送る", en: "Send another" },
+  sampleNotSent: {
+    ja: "サンプル表示のため、実際には送信されていません",
+    en: "This is a sample run, so nothing was actually sent",
+  },
 } satisfies Record<string, Localised>;
 
 export type CopyKey = keyof typeof strings;
