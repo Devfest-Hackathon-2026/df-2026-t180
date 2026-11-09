@@ -1,15 +1,40 @@
 .page {
+  display: flex;
+  flex-direction: column;
   width: min(960px, 100%);
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 0 var(--space-4) var(--space-10);
+  padding: 0 var(--space-4);
+}
+
+/* Card and manager sit together in the middle of the screen, a little above centre. */
+.stage {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: var(--space-4) 0 12vh;
+}
+
+.wrap {
+  position: relative;
+  width: min(420px, 100%);
+  padding-top: 102px;
+}
+
+/* The manager's hands rest on the card's top edge (102px down the drawing). */
+.manager {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
 }
 
 .card {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: var(--space-5);
-  width: min(420px, 100%);
-  margin: var(--space-10) auto 0;
+  width: 100%;
   padding: var(--space-6);
   background: var(--color-surface);
   border: var(--border);
@@ -104,6 +129,6 @@
 
 @media (min-width: 720px) {
   .page {
-    padding: 0 var(--space-6) var(--space-10);
+    padding: 0 var(--space-6);
   }
 }

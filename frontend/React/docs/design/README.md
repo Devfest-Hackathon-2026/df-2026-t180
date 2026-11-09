@@ -52,6 +52,16 @@ Posts are merged and approved before they become rules, so the guide stays a cur
 
 Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/rules`. Same tokens and components as the visitor side, with a 管理 tag next to the brand so admins always know where they are.
 
+- **Sign-in.** The card sits a little above the middle of the screen with the manager (the guide sprout in round glasses and a blue tie) peeking over its top edge, paws on the card. The manager is decorative (`aria-hidden`) and reacts to the form:
+
+  | Form | Manager |
+  | --- | --- |
+  | Nothing focused | Eyes follow the pointer |
+  | Email focused | Looks down and reads along as the address grows |
+  | Password focused | Covers its eyes with both paws |
+  | Missing fields or wrong password | Round eyes, flat mouth, a blue "?" and a small head shake |
+  | Signed in | Happy eyes, a hop and a wave, then the queue opens (600ms; at once with reduced motion) |
+
 - **Header.** One pill switch only: 候補 / 公開ルール. The candidate filters 新規 (add), 更新 (update), 経年確認 (re-check) are flat tabs with pending counts and a sliding underline; they roll down under the switch on 候補 and roll away on 公開ルール. Sign out is an icon (named ログアウト / Sign out for screen readers), so the row does not shift when the language changes. Decisions and counts are kept while switching between the two views.
 - **Each card reads as a short chat**, so it stays compact:
   - the resident (住民) on the left: their post and place, nothing else (their "why" is left out; the worry says enough);
@@ -141,6 +151,7 @@ Desktop, 900px and wider: one outlined header pill across the top (brand, search
 | `GuideContent`   | Region intro, category tabs and rules inside the sheet | category tab; focused rule                   | tabs are a nav with `aria-current`, 48px; rules are an ordered list                        |
 | Rule card        | One published statement                                | default, hover, focused                      | ordered list; pin chip named "Show on map: place", 44px hit area                           |
 | `AdminHeader` | Admin brand, 候補 / 公開ルール switch, JP/EN, sign-out icon; candidate filter tabs roll down under it | mobile, desktop; filters open, closed | nav with `aria-current`; closed filters are `inert`; sign-out icon has an `aria-label`; each page has a screen-reader `h1` |
+| `ManagerMascot` | Admin sign-in character on the card edge | idle, email, password, error, happy | decorative, `aria-hidden`; animations off with reduced motion |
 | `CandidateCard` | One candidate in the admin queue, as a short chat | add, update, review; editing; approved, rejected (collapsed with undo) | list item labelled by its `h2`; editor fields labelled 日本語 / 英語; 44px buttons |
 
 ## Review states
