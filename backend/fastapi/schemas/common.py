@@ -34,5 +34,6 @@ class LocalizedStatement(BaseModel):
 class Location(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    lat: float = Field(ge=-90, le=90)
-    lng: float = Field(ge=-180, le=180)
+    # 真偽値や文字列を数値に変換して保存しないよう、数値だけを受け付ける。
+    lat: float = Field(ge=-90, le=90, strict=True)
+    lng: float = Field(ge=-180, le=180, strict=True)

@@ -418,7 +418,8 @@ def test_approving_add_inherits_location(client, repository, location):
     response = decide(client, "post_1_4", {"action": "approve"})
 
     assert response.status_code == 200
-    assert repository.rules["rule_new"].model_dump()["location"] == location
+    rule_id = response.json()["rule"]["id"]
+    assert repository.rules[rule_id].model_dump()["location"] == location
     assert response.json()["rule"]["location"] == location
 
 

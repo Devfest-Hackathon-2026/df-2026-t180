@@ -89,9 +89,11 @@ def test_create_post_rejects_invalid_payload(client, repository, payload):
     assert repository.saved == []
 
 
-def test_create_post_saves_location(client, repository):
-    # 場所に紐づく投稿では、送られた位置をそのまま保存する。
-    location = {"lat": 34.5738, "lng": 135.4795}
+@pytest.mark.parametrize(
+    "location", [{"lat": 34.5738, "lng": 135.4795}, {"lat": 34, "lng": 135}]
+)
+def test_create_post_saves_location(client, repository, location):
+    # 場所に紐づく投稿では、送られた位置をそのまま保存する。整数も受け付ける。
     response = client.post("/api/posts", json={**POST, "location": location})
 
     assert response.status_code == 201
@@ -112,6 +114,8 @@ def test_create_post_without_location_saves_none(client, repository):
         {"lat": 34.5, "lng": 181},
         {"lat": 34.5},
         {"lat": 34.5, "lng": 135.0, "alt": 10},
+        {"lat": True, "lng": 135},
+        {"lat": "34.5", "lng": "135"},
         "34.5,135.0",
     ],
 )
