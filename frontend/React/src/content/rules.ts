@@ -8,7 +8,7 @@ export const regions: Region[] = [
   {
     id: "sakai",
     name: { ja: "堺市", en: "Sakai" },
-    parent: { ja: "大阪府 ・ 日本", en: "Osaka, Japan" },
+    parent: { ja: "大阪府", en: "Osaka" },
     sample: true,
     center: { lat: 34.5705, lng: 135.4765 },
     zoom: 14,

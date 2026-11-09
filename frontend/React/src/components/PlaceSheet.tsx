@@ -12,7 +12,7 @@ import { categories, t } from "@/content/copy";
 import type { Category, Lang, LatLng, PinnedRule, Region } from "@/content/types";
 import type { Params } from "@/content/url";
 import { CategoryIcon } from "./CategoryIcon";
-import { GuideContent } from "./GuideContent";
+import { GuideContent, GuideTabs } from "./GuideContent";
 import { Icon } from "./Icon";
 import { Tag } from "./Tag";
 import styles from "./PlaceSheet.module.css";
@@ -78,7 +78,7 @@ export function PlaceSheet(props: Props) {
     if (mode !== "full" || !scroller) return;
     const focused = rule ? scroller.querySelector<HTMLElement>(`[id="${rule.id}"]`) : null;
     const bottom = focused ? focused.offsetTop + focused.offsetHeight : 0;
-    // Only scroll when the rule would otherwise be hidden; keep the region intro in view if it fits.
+    // Only scroll when the rule would otherwise be hidden; otherwise start at the top.
     scroller.scrollTop =
       focused && bottom > scroller.clientHeight
         ? Math.max(0, focused.offsetTop - scroller.clientHeight / 3)
@@ -162,10 +162,11 @@ export function PlaceSheet(props: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [closeTo, navigate]);
 
-  // "Daisen Park, Sakai" / 「大仙公園・堺市」; just the area when the guide opens from search.
-  const title = rule
-    ? `${rule.place[lang]}${lang === "ja" ? "・" : ", "}${region.name[lang]}`
-    : region.name[lang];
+  // Title is the place (or the area when the guide opens from search); the line under it is
+  // 「堺市 ・ 大阪府」 / "Sakai · Osaka", or just the prefecture under an area title.
+  const title = rule ? rule.place[lang] : region.name[lang];
+  const sep = lang === "ja" ? " ・ " : " · ";
+  const subtitle = rule ? `${region.name[lang]}${sep}${region.parent[lang]}` : region.parent[lang];
 
   return (
     <section
@@ -212,8 +213,16 @@ export function PlaceSheet(props: Props) {
         <h2 className={styles.title} id="sheet-title">
           {title}
         </h2>
-        <p className={styles.parent}>{region.parent[lang]}</p>
+        <p className={styles.parent}>{subtitle}</p>
       </div>
+
+      {/* Full sheet: the tabs are part of the fixed header and never scroll. Kept out of the
+          measured header so the short card's height is unchanged. */}
+      {mode === "full" && (
+        <div className={styles.tabsBar}>
+          <GuideTabs region={region} lang={lang} tab={tab} linkTo={linkTo} />
+        </div>
+      )}
 
       <div ref={scrollerRef} className={styles.scroller}>
         {rule && (

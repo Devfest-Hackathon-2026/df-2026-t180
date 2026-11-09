@@ -16,6 +16,12 @@ How the design got here: [evolution/README.md](evolution/README.md).
 
 `BottomBar` is the same on every screen, so the nav never moves between pages and its thumb can slide. One full-width row: 探す / 地元の方 and the location button, both 56px tall, 16px from each edge, with the マナビ wordmark directly above. The row sits 30px above the bottom so the Google logo, "Map data" credit and Terms link stay visible; the Maps terms require them. The optional "Keyboard shortcuts" link is kept for keyboard users. While the sheet is open, the row is hidden and the wordmark and location button ride on top of the sheet. On the resident form the right-hand slot is the round yellow send button (paper plane, `aria-label` 送信する); after sending, an empty slot keeps the nav the same width. The form fades out under the row.
 
+## Sheet header
+
+The title is the place (大仙公園 / Daisen Park); the line under it is the city and prefecture with a spaced dot, 「堺市 ・ 大阪府」 / "Sakai · Osaka". When the guide opens from search there is no place, so the title is the city (堺市) and the line is just the prefecture. The country is left out.
+
+The category tabs sit directly under this header and are part of it, outside the scroll area, so they never move (not even with the bounce at either end). The full sheet has one fixed block and only the rules scroll beneath it (no second sticky layer). The old intro row (rule count, last-updated date, mascot) was removed for this: the tabs already show each category's count, and the mascot appears on empty and error states instead.
+
 ## Guide ordering (scales to many rules)
 
 Each category tab has two parts:
@@ -215,6 +221,7 @@ Outlined numbers (rule numbers and any future step numbers) must show one clean 
 | Hover arrow action            | Round ink arrow   | Turns 45° to point forward                                                                                                                                               | 320ms spring                            |
 | Switch language               | Thumb             | Slides between JP and EN; screen stays put                                                                                                                               | 320ms spring                            |
 | Switch area (探す / 地元の方) | AppNav thumb | Slides on the current screen first; the page changes when it lands (`useSlideNavigate`), so building the next screen (the map is heavy) never eats the slide. Labels swap colour as it passes. Overshoot scaled to the same ~4px as the language switch | 320ms, cubic-bezier(0.34, 1.3, 0.64, 1) |
+| Guide scroll edge | Category tabs | Rules fade out in the 16px under the tabs instead of being cut | static |
 | Admin switch (候補 / 公開ルール) | AdminHeader thumb | Same slide and curve as the visitor nav. Rule: every two-option pill switch with an ink thumb slides this way, on the visitor and admin side alike | 320ms, cubic-bezier(0.34, 1.3, 0.64, 1) |
 | Candidate filters | Underline | Slides to the chosen tab; the filter row rolls down on 候補 and away on 公開ルール | 320ms |
 | Hover rule card               | Outlined numeral  | Fills with the category colour                                                                                                                                           | 200ms                                   |
