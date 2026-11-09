@@ -52,15 +52,21 @@ Posts are merged and approved before they become rules, so the guide stays a cur
 
 Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/rules`. Same tokens and components as the visitor side, with a 管理 tag next to the brand so admins always know where they are.
 
-- **Candidates.** Three tabs with pending counts: 新規 (add), 更新 (update), 経年確認 (re-check). Each card shows what the admin needs to decide and nothing else: the resident post, the current rule (for update and re-check), why it needs a re-check, and the JP/EN text that will be published.
-- **Actions** follow the #24 proposal:
+- **Candidates.** Three tabs with pending counts: 新規 (add), 更新 (update), 経年確認 (re-check).
+- **Each card reads as a short chat**, so it stays compact:
+  - the resident (住民) on the left: their post and place, nothing else (their "why" is left out; the worry says enough);
+  - the draft rule (公開案) on the right: the UI language in bold, the other language small beneath. When it would replace a live rule, that rule is quoted at the top like a chat reply (公開中);
+  - a re-check reason is a centred system note, like a chat's date line. For a re-check the right bubble is the live rule itself, so it is labelled 公開中.
+- Region and date sit top right in Google Sans Flex; no section labels or dividers.
+- **Actions** are three equal pills in one row, colour-coded and without icons: 採用 / 問題なし (green), 修正 (orange), 却下 (red); English: Approve / Still OK, Edit, Reject. They follow the #24 proposal:
 
-  | Candidate | 採用 / 問題なし | 修正して採用 | 却下 |
+  | Candidate | 採用 / 問題なし | 修正 | 却下 |
   | --- | --- | --- | --- |
   | 新規 add | new rule | new rule with edited text | nothing published |
   | 更新 update | rule text replaced | edited text | rule unchanged |
   | 経年確認 review | 問題なし: only the last-checked date moves | edited text | rule unchanged |
 
+- 修正 turns the draft bubble into JP/EN fields at full width, with 保存 / やめる.
 - A decided card collapses to one row with 元に戻す (undo), so a mis-tap is cheap. When a tab is cleared, the mascot says so.
 - **Published rules** can be edited directly; saving moves the updated date.
 - Sign-in, decisions and edits are mocked in local state. They become Firebase sign-in, `PATCH /api/admin/candidates/{id}` (`{"action": "approve" | "reject", "statement"?: {ja, en}}`) and `PATCH /api/admin/rules/{id}`.
@@ -135,7 +141,7 @@ Desktop, 900px and wider: one outlined header pill across the top (brand, search
 | `GuideContent`   | Region intro, category tabs and rules inside the sheet | category tab; focused rule                   | tabs are a nav with `aria-current`, 48px; rules are an ordered list                        |
 | Rule card        | One published statement                                | default, hover, focused                      | ordered list; pin chip named "Show on map: place", 44px hit area                           |
 | `AdminHeader` | Admin brand, 候補 / 公開ルール switch, JP/EN, sign out | mobile, desktop | nav with `aria-current`; each page has a screen-reader `h1` |
-| `CandidateCard` | One candidate in the admin queue | add, update, review; approved, rejected (collapsed with undo) | list item labelled by its `h2`; editor fields labelled 日本語 / 英語; 44px buttons |
+| `CandidateCard` | One candidate in the admin queue, as a short chat | add, update, review; editing; approved, rejected (collapsed with undo) | list item labelled by its `h2`; editor fields labelled 日本語 / 英語; 44px buttons |
 
 ## Review states
 

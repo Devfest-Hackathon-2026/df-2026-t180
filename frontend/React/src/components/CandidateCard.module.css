@@ -1,7 +1,7 @@
 .card {
   display: grid;
-  gap: var(--space-4);
-  padding: var(--space-5);
+  gap: var(--space-3);
+  padding: var(--space-4);
   background: var(--color-surface);
   border: var(--border);
   border-radius: var(--radius-lg);
@@ -10,7 +10,6 @@
 
 .head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
@@ -18,116 +17,118 @@
 
 .meta {
   color: var(--color-ink-soft);
-  font: 600 12px var(--font-mono);
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.title {
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.5;
+/* Re-check reason: a centred system note, like a chat's date divider. */
+.system {
+  justify-self: center;
+  padding: 4px var(--space-3);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  background: var(--g-yellow-light);
+  border-radius: var(--radius-full);
 }
 
-.kicker {
-  display: block;
-  margin-bottom: var(--space-1);
+/* Chat thread: resident on the left, the draft rule on the right. */
+.message {
+  display: grid;
+  gap: 4px;
+  max-width: 88%;
+}
+
+.message[data-from="draft"] {
+  justify-self: end;
+  justify-items: end;
+}
+
+.who {
+  padding: 0 var(--space-2);
   color: var(--color-ink-soft);
-  font: 700 11px var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.reason {
-  display: flex;
-  align-items: flex-start;
+.bubble {
+  display: grid;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  font-size: 14px;
-  background: var(--g-yellow-light);
-  border-radius: var(--radius-sm);
-}
-
-.reason .kicker {
-  display: inline;
-  margin: 0 var(--space-1) 0 0;
-}
-
-.block {
-  margin: 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--color-divider);
-}
-
-.quote {
-  margin: 0;
-  padding-left: var(--space-3);
   font-size: 15px;
   line-height: 1.6;
-  border-left: 3px solid var(--color-divider);
+  background: var(--g-grey-light);
+  border-radius: 20px 20px 20px 6px;
 }
 
-.small {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  margin-top: var(--space-2);
-  color: var(--color-ink-soft);
-  font-size: 13px;
+.message[data-from="draft"] .bubble {
+  width: 100%;
+  background: var(--g-yellow-light);
+  border-radius: 20px 20px 6px;
 }
 
 .place {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--color-ink);
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
 }
 
-.current {
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.langs {
+/* The live rule this draft would replace, quoted like a chat reply. */
+.reply {
   display: grid;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.langRow {
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  gap: var(--space-2);
-  align-items: baseline;
-}
-
-.langRow dd {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.langLabel {
+  padding-left: var(--space-3);
   color: var(--color-ink-soft);
-  font: 700 11px var(--font-mono);
-  letter-spacing: 0.06em;
+  font-size: 13px;
+  line-height: 1.5;
+  border-left: 3px solid var(--color-ink-soft);
+}
+
+.replyLabel {
+  font-weight: 700;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.translation {
+  margin-top: calc(var(--space-2) * -1);
+  color: var(--color-ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .editor {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
+}
+
+/* While editing, the draft bubble takes the full width so the fields have room. */
+.message:has(.editor) {
+  width: 100%;
+  max-width: 100%;
 }
 
 .editField {
   display: grid;
-  gap: var(--space-1);
+  gap: 2px;
+}
+
+.langLabel {
+  color: var(--color-ink-soft);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .textarea {
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.5;
   background: var(--color-surface);
   border: var(--border);
   border-radius: var(--radius-md);
@@ -143,23 +144,26 @@
   box-shadow: var(--shadow-hard);
 }
 
+/* Equal-width actions so the row always lines up, in either language. */
 .actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
+  padding-top: var(--space-1);
 }
 
-.primary,
-.secondary,
-.reject {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+.actions[data-count="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.action {
   min-height: 44px;
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-2);
   font: inherit;
   font-size: 15px;
   font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-surface);
   border: var(--border);
   border-radius: var(--radius-full);
   cursor: pointer;
@@ -168,28 +172,24 @@
     box-shadow var(--duration-base) var(--ease-out);
 }
 
-.primary {
-  background: var(--color-highlight);
+.action[data-tone="approve"] {
+  background: var(--g-green-light);
 }
 
-.secondary {
-  background: var(--color-surface);
+.action[data-tone="edit"] {
+  background: var(--g-orange-light);
 }
 
-.reject {
-  margin-left: auto;
-  color: var(--g-red-deep);
-  background: var(--color-surface);
+.action[data-tone="reject"] {
+  background: var(--g-red-light);
 }
 
-.primary:hover:not(:disabled),
-.secondary:hover,
-.reject:hover {
+.action:hover:not(:disabled) {
   translate: -2px -2px;
   box-shadow: var(--shadow-hard);
 }
 
-.primary:disabled {
+.action:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -235,6 +235,25 @@
   border: var(--border);
   border-radius: var(--radius-full);
   cursor: pointer;
+}
+
+@media (min-width: 720px) {
+  .card {
+    padding: var(--space-5);
+  }
+
+  .message:not(:has(.editor)) {
+    max-width: 72%;
+  }
+
+  .actions {
+    grid-template-columns: repeat(3, 132px);
+    justify-content: end;
+  }
+
+  .actions[data-count="2"] {
+    grid-template-columns: repeat(2, 132px);
+  }
 }
 
 @keyframes rise {

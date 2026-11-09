@@ -19,14 +19,17 @@ const typeLabel = { add: "typeAdd", update: "typeUpdate", review: "typeReview" }
 const typeTone = { add: "living", update: "transport", review: "highlight" } as const;
 
 /**
- * One candidate in the admin queue. Approve publishes it; for a re-check it means "still
- * correct" (last_reviewed_at only). Edit lets the admin fix the ja/en text before approving.
- * Reject leaves the rule unchanged (#24).
+ * One candidate in the admin queue, read as a short chat: the resident's message on the left,
+ * the draft rule on the right (quoting the live rule when it would replace it), and a system note
+ * for re-checks. Approve publishes; for a re-check it means "still OK" (last_reviewed_at only).
+ * Edit fixes the ja/en text before approving. Reject leaves the rule unchanged (#24).
  */
 export function CandidateCard({ candidate: c, lang, onDecide, onUndo }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Localised>(c.statement);
   const titleId = `${c.id}-title`;
+  const other: Lang = lang === "ja" ? "en" : "ja";
+  const replaces = c.current && c.current.statement[lang] !== c.statement[lang];
 
   if (c.status !== "pending") {
     const done =
@@ -51,107 +54,82 @@ export function CandidateCard({ candidate: c, lang, onDecide, onUndo }: Props) {
         <Tag tone={typeTone[c.type]}>{ta(typeLabel[c.type], lang)}</Tag>
         <span className={styles.meta}>
           {findRegion(c.region)?.name[lang] ?? c.region}
-          {c.post && (
-            <>
-              <span aria-hidden="true"> · </span>
-              {formatJst(c.post.createdAt)}
-            </>
-          )}
+          {c.post && ` · ${formatJst(c.post.createdAt)}`}
         </span>
       </div>
 
-      <h2 className={styles.title} id={titleId}>
-        {c.statement[lang]}
-      </h2>
-
-      {c.reviewReason && (
-        <p className={styles.reason}>
-          <Icon name="locate" size={16} />
-          <span>
-            <span className={styles.kicker}>{ta("reviewReason", lang)}</span> {c.reviewReason}
-          </span>
-        </p>
-      )}
+      {c.reviewReason && <p className={styles.system}>{c.reviewReason}</p>}
 
       {c.post && (
-        <figure className={styles.block}>
-          <figcaption className={styles.kicker}>{ta("fromPost", lang)}</figcaption>
-          <blockquote className={styles.quote} lang="ja">
-            {c.post.text}
-          </blockquote>
-          {(c.post.reason || c.post.place) && (
-            <p className={styles.small}>
-              {c.post.reason && (
-                <span>
-                  {ta("postReason", lang)}：{c.post.reason}
-                </span>
-              )}
-              {c.post.place && (
-                <span className={styles.place}>
-                  <Icon name="pin" size={14} />
-                  {c.post.place}
-                </span>
-              )}
-            </p>
-          )}
-        </figure>
-      )}
-
-      {c.current && (
-        <div className={styles.block}>
-          <p className={styles.kicker}>{ta("currentRule", lang)}</p>
-          <p className={styles.current}>{c.current.statement[lang]}</p>
-          <p className={styles.small}>
-            {ta("lastChecked", lang)} {formatJst(c.current.lastReviewedAt ?? c.current.updatedAt)}
-          </p>
+        <div className={styles.message} data-from="resident">
+          <span className={styles.who}>{ta("resident", lang)}</span>
+          <div className={styles.bubble}>
+            <p lang="ja">{c.post.text}</p>
+            {c.post.place && (
+              <span className={styles.place}>
+                <Icon name="pin" size={14} />
+                {c.post.place}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
-      <div className={styles.block} data-proposed>
-        <p className={styles.kicker}>{ta("proposed", lang)}</p>
-        {editing ? (
-          <div className={styles.editor}>
-            {(["ja", "en"] as const).map((l) => (
-              <label key={l} className={styles.editField}>
-                <span className={styles.langLabel}>{l === "ja" ? "JP" : "EN"}</span>
-                <textarea
-                  className={styles.textarea}
-                  rows={2}
-                  lang={l}
-                  value={draft[l]}
-                  aria-label={ta(l === "ja" ? "japanese" : "english", lang)}
-                  onChange={(event) => setDraft({ ...draft, [l]: event.target.value })}
-                />
-              </label>
-            ))}
-          </div>
-        ) : (
-          <dl className={styles.langs}>
-            {(["ja", "en"] as const).map((l) => (
-              <div key={l} className={styles.langRow}>
-                <dt className={styles.langLabel}>{l === "ja" ? "JP" : "EN"}</dt>
-                <dd lang={l}>{c.statement[l]}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+      <div className={styles.message} data-from="draft">
+        <span className={styles.who}>
+          {ta(c.current && !replaces ? "liveNow" : "proposed", lang)}
+        </span>
+        <div className={styles.bubble}>
+          {replaces && c.current && (
+            <p className={styles.reply}>
+              <span className={styles.replyLabel}>{ta("liveNow", lang)}</span>
+              <span lang={lang}>{c.current.statement[lang]}</span>
+            </p>
+          )}
+          {editing ? (
+            <div className={styles.editor}>
+              {(["ja", "en"] as const).map((l) => (
+                <label key={l} className={styles.editField}>
+                  <span className={styles.langLabel}>{l === "ja" ? "JP" : "EN"}</span>
+                  <textarea
+                    className={styles.textarea}
+                    rows={2}
+                    lang={l}
+                    value={draft[l]}
+                    aria-label={ta(l === "ja" ? "japanese" : "english", lang)}
+                    onChange={(event) => setDraft({ ...draft, [l]: event.target.value })}
+                  />
+                </label>
+              ))}
+            </div>
+          ) : (
+            <>
+              <h2 className={styles.title} id={titleId} lang={lang}>
+                {c.statement[lang]}
+              </h2>
+              <p className={styles.translation} lang={other}>
+                {c.statement[other]}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className={styles.actions}>
+      <div className={styles.actions} data-count={editing ? 2 : 3}>
         {editing ? (
           <>
             <button
               type="button"
-              className={styles.primary}
+              className={styles.action}
+              data-tone="approve"
               disabled={!draft.ja.trim() || !draft.en.trim()}
               onClick={() => onDecide(c.id, "approve", draft)}
             >
-              <Icon name="check" size={18} strokeWidth={2.4} />
               {ta("save", lang)}
             </button>
             <button
               type="button"
-              className={styles.secondary}
+              className={styles.action}
               onClick={() => {
                 setDraft(c.statement);
                 setEditing(false);
@@ -164,18 +142,24 @@ export function CandidateCard({ candidate: c, lang, onDecide, onUndo }: Props) {
           <>
             <button
               type="button"
-              className={styles.primary}
+              className={styles.action}
+              data-tone="approve"
               onClick={() => onDecide(c.id, "approve")}
             >
-              <Icon name="check" size={18} strokeWidth={2.4} />
               {ta(c.type === "review" ? "stillCorrect" : "approve", lang)}
             </button>
-            <button type="button" className={styles.secondary} onClick={() => setEditing(true)}>
+            <button
+              type="button"
+              className={styles.action}
+              data-tone="edit"
+              onClick={() => setEditing(true)}
+            >
               {ta("edit", lang)}
             </button>
             <button
               type="button"
-              className={styles.reject}
+              className={styles.action}
+              data-tone="reject"
               onClick={() => onDecide(c.id, "reject")}
             >
               {ta("reject", lang)}

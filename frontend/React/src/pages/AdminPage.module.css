@@ -98,7 +98,8 @@
 .date {
   margin-left: auto;
   color: var(--color-ink-soft);
-  font: 600 12px var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .ruleBody {
