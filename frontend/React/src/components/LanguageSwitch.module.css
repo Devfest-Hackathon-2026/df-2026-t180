@@ -1,0 +1,43 @@
+.switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  flex: none;
+  padding: 2px;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+}
+
+.thumb {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  width: calc(50% - 2px);
+  background: var(--color-ink);
+  border-radius: var(--radius-full);
+  transition: translate var(--duration-slow) var(--ease-spring);
+}
+
+.switch[data-lang="en"] .thumb {
+  translate: 100% 0;
+}
+
+.option {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  font: 600 13px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  border-radius: var(--radius-full);
+  transition: color var(--duration-base) var(--ease-out);
+}
+
+.option[aria-current] {
+  color: var(--color-on-ink);
+}
+
+.option:not([aria-current]):hover {
+  background: var(--g-yellow-light);
+}

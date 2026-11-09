@@ -1,0 +1,89 @@
+/* The link is anchored on the centre of the round dot, so selection never moves the dot. */
+.marker {
+  --cat: var(--cat-manners);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  min-width: var(--target-min);
+  height: var(--target-min);
+  translate: -22px -22px;
+  transition: opacity var(--duration-base) ease;
+}
+
+.marker[data-category="transport"] {
+  --cat: var(--cat-transport);
+}
+
+.marker[data-category="living"] {
+  --cat: var(--cat-living);
+}
+
+.pin {
+  display: flex;
+  align-items: center;
+  margin-left: 2px;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  transition:
+    translate var(--duration-base) var(--ease-spring),
+    box-shadow var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) ease;
+}
+
+.dot {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -2px;
+  color: var(--color-ink);
+  background: var(--cat);
+  border: var(--border);
+  border-radius: 50%;
+}
+
+.name {
+  max-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  transition:
+    max-width var(--duration-slow) var(--ease-out),
+    opacity var(--duration-base) ease,
+    padding var(--duration-slow) var(--ease-out);
+}
+
+.marker:hover .pin {
+  translate: 0 -4px;
+  box-shadow: 0 4px 0 var(--color-ink);
+}
+
+.marker[data-selected] {
+  z-index: 2;
+}
+
+.marker[data-selected] .pin {
+  background: var(--color-highlight);
+  box-shadow: var(--shadow-hard);
+  translate: -2px -2px;
+  animation: drop var(--duration-slow) var(--ease-spring);
+}
+
+.marker[data-selected] .name {
+  max-width: 220px;
+  padding: 0 var(--space-4) 0 var(--space-2);
+  opacity: 1;
+}
+
+.marker[data-dimmed] {
+  opacity: 0.35;
+}
+
+@keyframes drop {
+  from {
+    translate: -2px -14px;
+  }
+}

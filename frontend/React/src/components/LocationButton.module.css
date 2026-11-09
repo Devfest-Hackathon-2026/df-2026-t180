@@ -1,0 +1,24 @@
+.button {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.button:hover {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.button[data-denied] {
+  color: var(--color-ink-soft);
+  border-style: dashed;
+}

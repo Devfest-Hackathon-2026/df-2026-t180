@@ -29,3 +29,14 @@ cp .env.example .env
 ## 地図
 
 - マーカーは `AdvancedMarkerElement` を使います。地図を作るときに `mapId` に `VITE_GOOGLE_MAP_ID` を渡してください
+
+## 起動とチェック
+
+```sh
+npm install
+npm run dev
+```
+
+チェック: `npm run lint`、`npm run format:check`、`npm run build`
+
+現在の UI は静的なサンプルデータのみで動きます(API・地図キー不要)。画面の状態は URL で切り替えられます。一覧とデザインの方針は [docs/design/README.md](docs/design/README.md) にあります。

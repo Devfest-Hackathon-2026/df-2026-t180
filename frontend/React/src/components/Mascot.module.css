@@ -1,0 +1,67 @@
+.mascot {
+  display: block;
+  overflow: visible;
+  flex: none;
+}
+
+.body {
+  animation: bob 3.2s ease-in-out infinite;
+}
+
+.eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 4.6s infinite;
+}
+
+.flag {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: wave 2.4s ease-in-out infinite;
+}
+
+.sprout {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  transition: rotate var(--duration-slow) var(--ease-spring);
+}
+
+.mascot:hover .sprout,
+:hover > .mascot .sprout {
+  rotate: -14deg;
+}
+
+.question {
+  font: 600 30px var(--font-sans);
+  fill: var(--g-blue);
+  animation: pop 2.4s ease-in-out infinite;
+}
+
+@keyframes bob {
+  50% {
+    translate: 0 -3px;
+  }
+}
+
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    scale: 1 1;
+  }
+  95% {
+    scale: 1 0.1;
+  }
+}
+
+@keyframes wave {
+  50% {
+    rotate: 8deg;
+  }
+}
+
+@keyframes pop {
+  50% {
+    translate: 0 -4px;
+  }
+}
