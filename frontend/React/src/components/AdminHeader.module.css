@@ -17,11 +17,6 @@
   min-width: 0;
 }
 
-/* Phones: keep the dots and the 管理 tag; the name is still read out by screen readers. */
-.brand a {
-  font-size: 0;
-}
-
 .end {
   grid-area: end;
   display: flex;
@@ -95,12 +90,6 @@
 .signOut:hover {
   color: var(--color-ink);
   background: var(--color-surface);
-}
-
-@media (min-width: 600px) {
-  .brand a {
-    font-size: 18px;
-  }
 }
 
 @media (min-width: 900px) {

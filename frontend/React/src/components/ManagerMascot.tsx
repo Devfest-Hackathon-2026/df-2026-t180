@@ -4,7 +4,13 @@ import styles from "./ManagerMascot.module.css";
 export type ManagerState = "idle" | "email" | "password" | "error" | "happy";
 
 type Props = {
-  state: ManagerState;
+  state?: ManagerState;
+  /**
+   * "card" (default) peeks over the sign-in card with its paws on the edge. "badge" is the head
+   * alone, for the admin header, and is announced with `label`.
+   */
+  variant?: "card" | "badge";
+  label?: string;
   /** Where the eyes look, each from -1 to 1 (x: left to right, y: up to down). */
   look?: { x: number; y: number };
   className?: string;
@@ -17,19 +23,26 @@ const EDGE = 96; // y of the card's top edge in the drawing
  * the sign-in card with both hands on it. Drawn in two layers that share one viewBox: the body sits
  * behind the card (so the card hides its lower half) and the hands sit in front of it. Decorative.
  */
-export function ManagerMascot({ state, look = { x: 0, y: 0 }, className }: Props) {
+export function ManagerMascot({
+  state = "idle",
+  variant = "card",
+  label,
+  look = { x: 0, y: 0 },
+  className,
+}: Props) {
   const vars = { "--lx": look.x, "--ly": look.y } as CSSProperties;
   const happy = state === "happy";
   const puzzled = state === "error";
+  const badge = variant === "badge";
 
   return (
     <div
-      className={[styles.mascot, className].filter(Boolean).join(" ")}
+      className={[badge ? styles.badge : styles.mascot, className].filter(Boolean).join(" ")}
       data-state={state}
       style={vars}
-      aria-hidden="true"
+      {...(badge && label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}
     >
-      <svg className={styles.back} viewBox="0 0 160 110">
+      <svg className={styles.back} viewBox={badge ? "34 4 92 102" : "0 0 160 110"}>
         <g className={styles.body}>
           <g
             className={styles.sprout}
@@ -57,7 +70,7 @@ export function ManagerMascot({ state, look = { x: 0, y: 0 }, className }: Props
             fill="var(--g-blue)"
           >
             <path d="M75 86h10l-2 5h-6z" />
-            <path d="M77 91h6l3 12h-12z" />
+            <path d={badge ? "M77 91h6l2 7h-10z" : "M77 91h6l3 12h-12z"} />
           </g>
 
           <g className={styles.face}>
@@ -99,22 +112,24 @@ export function ManagerMascot({ state, look = { x: 0, y: 0 }, className }: Props
         </g>
       </svg>
 
-      <svg className={styles.front} viewBox="0 0 160 110">
-        <g fill="var(--lime)" stroke="var(--color-ink)" strokeWidth="3" strokeLinecap="round">
-          <g className={styles.handLeft}>
-            <g transform={`translate(52 ${EDGE})`}>
-              <circle r="11" />
-              <path d="M-4-6.5v4M1-7.5v4" strokeWidth="2" />
+      {!badge && (
+        <svg className={styles.front} viewBox="0 0 160 110">
+          <g fill="var(--lime)" stroke="var(--color-ink)" strokeWidth="3" strokeLinecap="round">
+            <g className={styles.handLeft}>
+              <g transform={`translate(52 ${EDGE})`}>
+                <circle r="11" />
+                <path d="M-4-6.5v4M1-7.5v4" strokeWidth="2" />
+              </g>
+            </g>
+            <g className={styles.handRight}>
+              <g transform={`translate(108 ${EDGE})`}>
+                <circle r="11" />
+                <path d="M-1-7.5v4M4-6.5v4" strokeWidth="2" />
+              </g>
             </g>
           </g>
-          <g className={styles.handRight}>
-            <g transform={`translate(108 ${EDGE})`}>
-              <circle r="11" />
-              <path d="M-1-7.5v4M4-6.5v4" strokeWidth="2" />
-            </g>
-          </g>
-        </g>
-      </svg>
+        </svg>
+      )}
     </div>
   );
 }

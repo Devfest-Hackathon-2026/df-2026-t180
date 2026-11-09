@@ -29,6 +29,57 @@
   translate: -50% 0;
 }
 
+/* Thought bubble up and to the right of the manager's head, with two trailing puffs. */
+.thought {
+  position: absolute;
+  bottom: 78px;
+  left: calc(100% - 44px);
+  z-index: 2;
+  padding: var(--space-2) var(--space-4);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  animation: float 3.2s ease-in-out infinite;
+}
+
+.thought::before,
+.thought::after {
+  content: "";
+  position: absolute;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: 50%;
+}
+
+.thought::before {
+  bottom: -14px;
+  left: 14px;
+  width: 12px;
+  height: 12px;
+}
+
+.thought::after {
+  bottom: -24px;
+  left: 4px;
+  width: 8px;
+  height: 8px;
+}
+
+@keyframes float {
+  50% {
+    translate: 0 -3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thought {
+    animation: none;
+  }
+}
+
 .card {
   position: relative;
   z-index: 1;

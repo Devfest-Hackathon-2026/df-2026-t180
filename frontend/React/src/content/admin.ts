@@ -130,7 +130,8 @@ export const sampleCandidates: Candidate[] = [
 ];
 
 const strings = {
-  admin: { ja: "管理", en: "Admin" },
+  admin: { ja: "管理者ページ", en: "Admin area" },
+  adminOnly: { ja: "管理者専用！", en: "Admin only!" },
   loginTitle: { ja: "管理者ログイン", en: "Admin sign-in" },
   email: { ja: "メールアドレス", en: "Email" },
   password: { ja: "パスワード", en: "Password" },

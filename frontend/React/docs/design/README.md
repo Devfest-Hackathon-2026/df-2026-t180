@@ -52,7 +52,7 @@ Posts are merged and approved before they become rules, so the guide stays a cur
 
 Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/rules`. Same tokens and components as the visitor side, with a 管理 tag next to the brand so admins always know where they are.
 
-- **Sign-in.** The card sits a little above the middle of the screen with the manager (the guide sprout in round glasses and a blue tie) peeking over its top edge, paws on the card. The manager is decorative (`aria-hidden`) and reacts to the form:
+- **Sign-in.** The card sits a little above the middle of the screen with the manager (the guide sprout in round glasses and a blue tie) peeking over its top edge, paws on the card. A thought bubble says 管理者専用！ / Admin only! The manager is decorative (`aria-hidden`) and reacts to the form:
 
   | Form | Manager |
   | --- | --- |
@@ -62,6 +62,7 @@ Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/
   | Missing fields or wrong password | Round eyes, flat mouth, a blue "?" and a small head shake |
   | Signed in | Happy eyes, a hop and a wave, then the queue opens (600ms; at once with reduced motion) |
 
+- **Admin marker.** No 管理 pill: once signed in, a small manager head sits next to the Manabi wordmark (announced as 管理者ページ / Admin area).
 - **Header.** One pill switch only: 候補 / 公開ルール. The candidate filters 新規 (add), 更新 (update), 経年確認 (re-check) are flat tabs with pending counts and a sliding underline; they roll down under the switch on 候補 and roll away on 公開ルール. Sign out is an icon (named ログアウト / Sign out for screen readers), so the row does not shift when the language changes. Decisions and counts are kept while switching between the two views.
 - **Each card reads as a short chat**, so it stays compact:
   - the resident (住民) on the left: their post and place, nothing else (their "why" is left out; the worry says enough);
@@ -83,7 +84,7 @@ Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/
 
 ## Direction
 
-Google's own visual language, as used on the DevFest GDGoC Japan Hackathon site: light grey ground, white surfaces with 2px ink outlines, Google blue, red, yellow and green, pill shapes, small monospace tags and bold Google Sans headlines. Hover states are playful: outlined things lift with a hard offset shadow, arrows turn, dots hop.
+Google's own visual language, as used on the DevFest GDGoC Japan Hackathon site: light grey ground, white surfaces with 2px ink outlines, Google blue, red, yellow and green, pill shapes, small monospace tags and bold Google Sans headlines. Hover states are playful: outlined things lift with a hard offset shadow, arrows turn, the wordmark letters hop.
 
 The home screen is only a search bar and the map. Nothing opens a new page: as in Google Maps, a pin raises a sheet over the map. Half height shows the statement; dragging up (or the arrow) expands the same sheet into the regional guide, a readable document split into Manners, Transport and Living tabs. Dragging down or × returns to the map.
 
@@ -135,7 +136,7 @@ Desktop, 900px and wider: one outlined header pill across the top (brand, search
 | Component        | Purpose                                                | Variants and states                          | Accessibility                                                                              |
 | ---------------- | ------------------------------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | `AppNav`         | Visitor and resident areas                             | current item                                 | `aria-current="page"`, 44px items                                                          |
-| `BrandMark`      | Product name, home link                                | —                                            | `h1` on home; dots are decorative                                                          |
+| `BrandMark` | "Manabi" wordmark in ink, home link | — | `h1` on home; named マナビ / Manabi for screen readers. The black マナビ over the phone map is separate |
 | `SearchBar`      | Find an area                                           | focus                                        | labelled input in a search landmark                                                        |
 | `LanguageSwitch` | JP/EN from any screen                                  | ja, en                                       | nav landmark; options named 日本語 / English, 44px                                         |
 | `MapMarker`      | Opens a pin                                            | category × default, hover, selected, dimmed  | link with the full name, 44px target                                                       |
@@ -151,7 +152,7 @@ Desktop, 900px and wider: one outlined header pill across the top (brand, search
 | `GuideContent`   | Region intro, category tabs and rules inside the sheet | category tab; focused rule                   | tabs are a nav with `aria-current`, 48px; rules are an ordered list                        |
 | Rule card        | One published statement                                | default, hover, focused                      | ordered list; pin chip named "Show on map: place", 44px hit area                           |
 | `AdminHeader` | Admin brand, 候補 / 公開ルール switch, JP/EN, sign-out icon; candidate filter tabs roll down under it | mobile, desktop; filters open, closed | nav with `aria-current`; closed filters are `inert`; sign-out icon has an `aria-label`; each page has a screen-reader `h1` |
-| `ManagerMascot` | Admin sign-in character on the card edge | idle, email, password, error, happy | decorative, `aria-hidden`; animations off with reduced motion |
+| `ManagerMascot` | Admin sign-in character on the card edge; head-only badge in the admin header | card: idle, email, password, error, happy; badge | decorative, `aria-hidden`; animations off with reduced motion |
 | `CandidateCard` | One candidate in the admin queue, as a short chat | add, update, review; editing; approved, rejected (collapsed with undo) | list item labelled by its `h2`; editor fields labelled 日本語 / 英語; 44px buttons |
 
 ## Review states
@@ -218,7 +219,7 @@ Outlined numbers (rule numbers and any future step numbers) must show one clean 
 | Candidate filters | Underline | Slides to the chosen tab; the filter row rolls down on 候補 and away on 公開ルール | 320ms |
 | Hover rule card               | Outlined numeral  | Fills with the category colour                                                                                                                                           | 200ms                                   |
 | Drag sheet / tap arrow        | Place sheet       | Follows the finger, then snaps to full, half or closed by distance and speed; guide rules rise 40ms apart                                                                | 380ms                                   |
-| Hover brand                   | Four dots         | Hop in sequence, 60ms apart                                                                                                                                              | 480ms                                   |
+| Hover brand | Manabi letters | Hop in sequence, 50ms apart | 480ms |
 | Idle                          | Mascot            | Bob, blink, flag sway; sprout tilts on hover                                                                                                                             | 3.2s / 4.6s / 2.4s                      |
 | Loading                       | Four dots         | Hop in sequence                                                                                                                                                          | 900ms loop                              |
 
@@ -235,7 +236,7 @@ All motion stops under `prefers-reduced-motion: reduce`.
 | Statement only in the preview                    | Public data has a statement; the reason is resident input for admins                    | Note / Why / Checked rows                       |
 | Arrow icon instead of "詳しく見る"               | One obvious action; the label lives in `aria-label`                                     | A text button that did not say where it goes    |
 | Segmented JP \| EN switch, top-right everywhere  | Both options visible, current one obvious                                               | A single toggle showing only the other language |
-| Own brand mark (four dots)                       | Google colours without using Google or GDG logos                                        | Any Google logo                                 |
+| Own wordmark (Manabi in ink) | Our own name, no Google or GDG logos; coloured letters were tried and read poorly | Any Google logo                                 |
 | State held in the URL                            | Keeps this PR free of application logic and makes states reviewable                     | Component state                                 |
 | Fictional sample town                            | Avoids inventing rules for a real place; demo region is Sakai                           | Rules for a real municipality                   |
 

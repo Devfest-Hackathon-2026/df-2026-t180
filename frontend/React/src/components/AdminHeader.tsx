@@ -5,19 +5,22 @@ import { href } from "@/content/url";
 import { BrandMark } from "./BrandMark";
 import { Icon } from "./Icon";
 import { LanguageSwitch } from "./LanguageSwitch";
-import { Tag } from "./Tag";
+import { ManagerMascot } from "./ManagerMascot";
 import styles from "./AdminHeader.module.css";
 
 type Props = { lang: Lang; current?: "candidates" | "rules" };
 
-/** Admin top bar: brand with an 管理 tag, the two admin areas, language and sign out. */
+/**
+ * Admin top bar: the wordmark, then (once signed in) the manager's head to mark admin-only
+ * territory, the two admin areas, language and sign out.
+ */
 export function AdminHeader({ lang, current }: Props) {
   const langParam = { lang: lang === "en" ? "en" : undefined };
   return (
     <header className={styles.header}>
       <div className={styles.brand}>
         <BrandMark lang={lang} />
-        <Tag tone="highlight">{ta("admin", lang)}</Tag>
+        {current && <ManagerMascot variant="badge" label={ta("admin", lang)} />}
       </div>
       {current && (
         <nav className={styles.nav} aria-label={ta("adminNav", lang)} data-current={current}>

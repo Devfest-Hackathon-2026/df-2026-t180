@@ -11,6 +11,16 @@
   pointer-events: none;
 }
 
+/* Head only, for the admin header. */
+.badge {
+  --lx: 0;
+  --ly: 0;
+  position: relative;
+  flex: none;
+  width: 40px;
+  aspect-ratio: 92 / 102;
+}
+
 .back,
 .front {
   position: absolute;

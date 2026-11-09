@@ -74,6 +74,10 @@ export function AdminLoginPage() {
         <div className={styles.wrap}>
           <div className={styles.manager} ref={mascotRef}>
             <ManagerMascot state={state} look={look} />
+            {/* The manager's thought, shown on screen only; the page title says the same. */}
+            <p className={styles.thought} aria-hidden="true">
+              {ta("adminOnly", lang)}
+            </p>
           </div>
           <form className={styles.card} onSubmit={onSubmit} noValidate>
             <h1 className={styles.title}>{ta("loginTitle", lang)}</h1>
