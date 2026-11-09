@@ -61,12 +61,76 @@ cp .env.example .env
 
 Cloud Run では、実行用のサービスアカウントに `roles/aiplatform.user`(Agent Platform User)を付けます。
 
+## 管理者 API（機能D）
+
+`/api/admin/*` は `Authorization: Bearer <Firebase ID トークン>` が必要です。
+FastAPI が Firebase Admin SDK でトークンを検証し、`admins` コレクションに UID が登録されている場合だけ許可します。
+
+| 状態 | ステータス |
+| --- | --- |
+| トークンがない・無効（署名・`iss`・`aud`・期限・`sub`・`auth_time` など） | 401（設定がなくても 401） |
+| 有効だが `admins` に登録がない | 403 |
+| `FIREBASE_PROJECT_ID`（未設定なら `GOOGLE_CLOUD_PROJECT`）がない | 503 |
+| Google の公開鍵を取得できない（一時的な通信障害） | 503 |
+
+公開鍵は `Cache-Control` の `max-age` に従ってキャッシュします。
+
+管理者の追加は Firestore コンソールで行います。
+`admins` にドキュメントID = Firebase UID のドキュメントを作り、`firebase_uid` と `employee_name` を入れます。
+取り消すときは `admins` からそのドキュメントを削除します。次のリクエストから 403 になります。
+Firebase Authentication 側の無効化・トークン失効は確認していません（`check_revoked=False`。理由は `services/firebase_auth.py`）。
+
+| メソッド | パス | 内容 |
+| --- | --- | --- |
+| GET | `/api/admin/candidates` | 候補の一覧。`status`（既定 `pending`、`all` で全件）・`type`・`region` で絞り込み。元の投稿（`post`）と対象ルールの現在の内容（`current`。`version` を含む）を添える。候補の生成後にルールが変わっていれば `rule_changed_since_generated` が `true`（#39） |
+| PATCH | `/api/admin/candidates/{id}` | `{"action": "approve" \| "reject", "statement"?: {ja, en}, "expected_version"?: string}` |
+| GET | `/api/admin/rules` | 公開ルールの一覧（`region` で絞り込み）。新しく更新されたものから。各ルールに `version` を含む |
+| PATCH | `/api/admin/rules/{id}` | `{"statement": {ja, en}, "expected_version": string}`。`updated_at` を更新 |
+
+### 古い画面からの上書きを防ぐ（version）
+
+既存のルールを書き換える操作（update・review の採用と、ルールの直接編集）では、画面で表示していたルールの `version` を `expected_version` に入れて送ります。
+候補の採否では `current.version`、直接編集ではルール一覧の `version` です。
+
+- その後ルールが変わっていれば 409 で、候補もルールも書き込みません。画面を読み直してからやり直します
+- 成功したときの応答にも新しい `version` が入ります。続けて編集するときはこれを使います
+- update・review の採用で `expected_version` がなければ 422。add の採用と却下では使いません
+- 同時の変更が続いて確定できないときも 409 です
+
+候補の `statement` は Gemini の提案文のまま残し、採用で実際に公開・確認した文は `decided_statement` に入ります（却下では空）。
+
+`version` はルールの保存内容から計算する値で、管理者の書き込みでは必ず変わります（「問題なし」でも `last_reviewed_at` が進むため）。
+
+### 採否のステータス
+
+| 状態 | ステータス |
+| --- | --- |
+| 候補が見つからない | 404 |
+| 判断済み | 409 |
+| 対象ルールが存在しない・候補と地域が違う（採用時） | 409 |
+| 対象ルールが存在しない候補の却下 | 200（不要な候補を片付けられる） |
+
+採否の扱い（#24）と日時の役割は `services/admin_decisions.py` の先頭に書いています。
+既存ドキュメントは変わったフィールドだけを更新するので、モデルにないフィールドも残ります。
+一覧のページングをしない理由は `repositories/admin.py` の先頭に書いています。
+
 ## テスト・静的解析
 
 ```sh
 python -m pytest
 python -m ruff check .
 python -m ruff format --check .
+```
+
+### Firestore Emulator での結合テスト
+
+`tests/test_admin_firestore.py` は、同時実行・再試行・コミット失敗を本物の Firestore（Emulator）で確かめます。
+`FIRESTORE_EMULATOR_HOST` がないときはスキップします。Java と Node.js が必要です。
+
+```sh
+npx firebase-tools emulators:start --only firestore --project demo-admin
+# 別のターミナルで
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 python -m pytest tests/test_admin_firestore.py
 ```
 
 ## 構成
