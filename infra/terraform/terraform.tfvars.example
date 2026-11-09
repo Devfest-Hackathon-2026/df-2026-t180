@@ -1,0 +1,4 @@
+project_id = "hack26-project"
+region     = "asia-northeast1"
+deploy_api = false
+api_image  = ""
