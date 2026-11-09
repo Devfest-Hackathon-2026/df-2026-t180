@@ -61,6 +61,26 @@ cp .env.example .env
 
 Cloud Run では、実行用のサービスアカウントに `roles/aiplatform.user`(Agent Platform User)を付けます。
 
+## 管理者 API（機能D）
+
+`/api/admin/*` は `Authorization: Bearer <Firebase ID トークン>` が必要です。
+FastAPI がトークンを検証し、`admins` コレクションに UID が登録されている場合だけ許可します。
+
+- トークンがない・無効: 401
+- 有効だが `admins` に登録がない: 403
+- `FIREBASE_PROJECT_ID`（未設定なら `GOOGLE_CLOUD_PROJECT`）がない: 503
+
+管理者の追加は Firestore コンソールで行います。
+`admins` にドキュメントID = Firebase UID のドキュメントを作り、`firebase_uid` と `employee_name` を入れます。
+
+| メソッド | パス | 内容 |
+| --- | --- | --- |
+| GET | `/api/admin/candidates` | 候補の一覧。`status`（既定 `pending`、`all` で全件）・`type`・`region` で絞り込み。元の投稿と対象ルールの現在の内容を含む |
+| PATCH | `/api/admin/candidates/{id}` | `{"action": "approve" \| "reject", "statement"?: {ja, en}}`。判断済みなら 409 |
+| PATCH | `/api/admin/rules/{id}` | `{"statement": {ja, en}}`。`updated_at` を更新 |
+
+採否の扱い（#24）は `services/admin_decisions.py` に書いています。
+
 ## テスト・静的解析
 
 ```sh
