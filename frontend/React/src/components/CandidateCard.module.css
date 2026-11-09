@@ -32,6 +32,17 @@
   border-radius: var(--radius-full);
 }
 
+/* The rule changed after Gemini drafted this: same system-note shape, warning colour. */
+.warning {
+  justify-self: center;
+  padding: 4px var(--space-3);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  background: var(--g-orange-light);
+  border-radius: var(--radius-sm);
+}
+
 /* Chat thread: resident on the left, the draft rule on the right. */
 .message {
   display: grid;

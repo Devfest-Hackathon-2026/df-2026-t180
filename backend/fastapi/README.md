@@ -82,7 +82,7 @@ Firebase Authentication 側の無効化・トークン失効は確認してい�
 
 | メソッド | パス | 内容 |
 | --- | --- | --- |
-| GET | `/api/admin/candidates` | 候補の一覧。`status`（既定 `pending`、`all` で全件）・`type`・`region` で絞り込み。元の投稿（`post`）と対象ルールの現在の内容（`current`。`version` を含む）を添える |
+| GET | `/api/admin/candidates` | 候補の一覧。`status`（既定 `pending`、`all` で全件）・`type`・`region` で絞り込み。元の投稿（`post`）と対象ルールの現在の内容（`current`。`version` を含む）を添える。候補の生成後にルールが変わっていれば `rule_changed_since_generated` が `true`（#39） |
 | PATCH | `/api/admin/candidates/{id}` | `{"action": "approve" \| "reject", "statement"?: {ja, en}, "expected_version"?: string}` |
 | GET | `/api/admin/rules` | 公開ルールの一覧（`region` で絞り込み）。新しく更新されたものから。各ルールに `version` を含む |
 | PATCH | `/api/admin/rules/{id}` | `{"statement": {ja, en}, "expected_version": string}`。`updated_at` を更新 |
@@ -96,6 +96,8 @@ Firebase Authentication 側の無効化・トークン失効は確認してい�
 - 成功したときの応答にも新しい `version` が入ります。続けて編集するときはこれを使います
 - update・review の採用で `expected_version` がなければ 422。add の採用と却下では使いません
 - 同時の変更が続いて確定できないときも 409 です
+
+候補の `statement` は Gemini の提案文のまま残し、採用で実際に公開・確認した文は `decided_statement` に入ります（却下では空）。
 
 `version` はルールの保存内容から計算する値で、管理者の書き込みでは必ず変わります（「問題なし」でも `last_reviewed_at` が進むため）。
 

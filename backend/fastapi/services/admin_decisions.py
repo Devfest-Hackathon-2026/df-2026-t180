@@ -21,9 +21,10 @@ review は経年確認（source=stale_rule）と投稿との矛盾（source=post
 - last_reviewed_at: 管理者が最後に内容を確認した日時。review の採用で更新する
 - 機能B の経年確認は、この 2 つのうち新しい方から年数を数える
 
-採用後の候補の statement は、実際に公開・確認した文にそろえる。review の「問題なし」
-では候補の提案文ではなく、確認した対象ルールの文が入る。元の提案は投稿（post_id）から
-たどれる。
+候補の statement（Gemini の提案文）は採否で書き換えない。実際に公開・確認した文は
+decided_statement に入れる。review の「問題なし」では確認した対象ルールの文、
+「修正して採用」では修正後の文、add・update の採用では公開した文。却下では入れない。
+提案と結果を別々に残し、Gemini の提案が後から追えるようにするため。
 
 古い画面からの上書きを防ぐため、既存ルールを書き換える操作（update・review の採用、
 直接編集）では、画面で表示していたルールの version を受け取り、今の version と
@@ -123,9 +124,9 @@ def decide_candidate(
 
 
 def _approved(candidate: Candidate, rule: Rule) -> Candidate:
-    # 公開・確認した文を候補にも残し、何が公開されたか後から追えるようにする。
+    # 提案文（statement）はそのまま、公開・確認した文を decided_statement に残す。
     return candidate.model_copy(
-        update={"status": "approved", "statement": rule.statement}
+        update={"status": "approved", "decided_statement": rule.statement}
     )
 
 

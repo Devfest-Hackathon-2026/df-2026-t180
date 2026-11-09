@@ -144,7 +144,14 @@ export function AdminPage() {
           ? {
               ...c,
               status: decision === "approve" ? "approved" : "rejected",
-              statement: statement ?? c.statement,
+              // Shown until the server answers: the edited text, the rule confirmed as still
+              // correct, or the proposal as published. The proposal itself is never replaced.
+              decidedStatement:
+                decision === "approve"
+                  ? (statement ??
+                    (c.type === "review" ? c.current?.statement : undefined) ??
+                    c.statement)
+                  : undefined,
             }
           : c,
       ),

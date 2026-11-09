@@ -69,6 +69,8 @@ type ApiCandidate = {
   type: Candidate["type"];
   target_rule_id?: string | null;
   review_reason?: string | null;
+  decided_statement?: Localised | null;
+  rule_changed_since_generated?: boolean;
   post?: { text: string; reason?: string | null; created_at: string } | null;
   current?: {
     statement: Localised;
@@ -97,6 +99,8 @@ const toCandidate = (c: ApiCandidate): Candidate => ({
   statement: c.statement,
   targetRuleId: c.target_rule_id ?? undefined,
   reviewReason: c.review_reason ?? undefined,
+  decidedStatement: c.decided_statement ?? undefined,
+  ruleChangedSinceGenerated: c.rule_changed_since_generated ?? false,
   post: c.post
     ? { text: c.post.text, reason: c.post.reason ?? undefined, createdAt: c.post.created_at }
     : undefined,

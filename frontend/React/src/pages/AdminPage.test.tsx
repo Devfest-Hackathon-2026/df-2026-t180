@@ -31,6 +31,8 @@ class FakeServer {
     status: "pending",
     type: "update",
     target_rule_id: "rule_1",
+    rule_changed_since_generated: false,
+    decided_statement: null as Localised | null,
   }));
   writes: { path: string; body: Record<string, unknown> }[] = [];
 
@@ -76,12 +78,10 @@ class FakeServer {
     }
     if (path.startsWith("/api/admin/candidates/")) {
       const candidate = this.candidates.find((c) => path.endsWith(c.id))!;
+      const published = (body.statement as Localised | undefined) ?? candidate.statement;
       candidate.status = "approved";
-      this.rule = {
-        ...this.rule,
-        statement: candidate.statement,
-        version: this.rule.version + 1,
-      };
+      candidate.decided_statement = published;
+      this.rule = { ...this.rule, statement: published, version: this.rule.version + 1 };
       return json(200, { candidate, rule: this.apiRule() });
     }
     this.rule = {
@@ -235,5 +235,34 @@ describe("editing a rule someone else changed", () => {
     expect(server.writes.at(-1)!.body).toMatchObject({ expected_version: "v2" });
     expect(server.rule.statement.ja).toBe("さらに別の文");
     within(screen.getByLabelText("公開中の最新の文")).getByText("さらに別の文");
+  });
+});
+
+describe("proposal and decision", () => {
+  it("warns when the rule changed after Gemini drafted the candidate", async () => {
+    server.candidates[0].rule_changed_since_generated = true;
+    await open("/admin/candidates?type=update");
+
+    const warnings = screen.getAllByRole("note");
+    expect(warnings.map((n) => n.textContent)).toContain(
+      "この提案の作成後に公開ルールが変更されています。現在の公開文を確認してください",
+    );
+    // Only the flagged candidate warns; approving is still possible.
+    expect(warnings.filter((n) => n.textContent?.includes("作成後"))).toHaveLength(1);
+    expect(approveButtons()).toHaveLength(2);
+  });
+
+  it("shows the edited text as published, while the server keeps the proposal", async () => {
+    await open("/admin/candidates?type=update");
+    fireEvent.click(screen.getAllByRole("button", { name: "修正" })[0]);
+    fireEvent.change(screen.getByRole("textbox", { name: "日本語" }), {
+      target: { value: "直した文" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    await wait(5000);
+
+    expect(server.writes.at(-1)!.body.statement).toMatchObject({ ja: "直した文" });
+    expect(server.candidates[0].statement.ja).toBe("Aの提案");
+    expect(screen.getByText("直した文")).toBeTruthy();
   });
 });

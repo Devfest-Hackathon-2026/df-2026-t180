@@ -135,9 +135,15 @@ def list_candidates(
     for candidate in candidates:
         post = posts.get(candidate.post_id) if candidate.post_id else None
         rule = rules.get(candidate.target_rule_id) if candidate.target_rule_id else None
+        version = rule_version(rule) if rule else None
         result.append(
             AdminCandidate(
                 **candidate.model_dump(),
+                rule_changed_since_generated=(
+                    version is not None
+                    and candidate.target_rule_version is not None
+                    and candidate.target_rule_version != version
+                ),
                 post=CandidatePost(
                     **post.model_dump(include={"text", "reason", "created_at"})
                 )
@@ -147,7 +153,7 @@ def list_candidates(
                     **rule.model_dump(
                         include={"statement", "updated_at", "last_reviewed_at"}
                     ),
-                    version=rule_version(rule),
+                    version=version,
                 )
                 if rule
                 else None,

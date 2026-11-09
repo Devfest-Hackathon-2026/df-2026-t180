@@ -18,6 +18,10 @@ export type Candidate = {
   statement: Localised;
   targetRuleId?: string;
   reviewReason?: string;
+  /** The text the admin actually published or confirmed; `statement` stays Gemini's proposal. */
+  decidedStatement?: Localised;
+  /** The rule changed after Gemini wrote this proposal (from the rule version it read). */
+  ruleChangedSinceGenerated?: boolean;
   /** The resident's original post, for candidates that came from a post. */
   post?: { text: string; reason?: string; place?: string; createdAt: string };
   /** The published rule this candidate would change or re-check. */
@@ -189,6 +193,10 @@ const strings = {
   latestPublished: { ja: "公開中の最新の文", en: "Latest published text" },
   useLatest: { ja: "最新の文で書き直す", en: "Edit the latest" },
   overwrite: { ja: "この下書きで上書き", en: "Replace with my draft" },
+  ruleChangedSinceGenerated: {
+    ja: "この提案の作成後に公開ルールが変更されています。現在の公開文を確認してください",
+    en: "The rule changed after this was drafted. Check the current text",
+  },
   retry: { ja: "再読み込み", en: "Reload" },
   sampleData: {
     ja: "サンプルデータで表示中です（保存されません）",
