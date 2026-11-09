@@ -9,6 +9,12 @@ from services.firebase_auth import (
 )
 
 
+@pytest.fixture(autouse=True)
+def no_dotenv(monkeypatch):
+    # 手元の .env に左右されないよう、テストでは読み込まない。
+    monkeypatch.setattr(firebase_auth, "load_dotenv", lambda: None)
+
+
 @pytest.fixture
 def verifier(monkeypatch):
     calls = {}
@@ -51,6 +57,20 @@ def test_project_id_is_required(monkeypatch):
 
     with pytest.raises(AuthNotConfigured):
         firebase_auth.get_token_verifier()
+    firebase_auth.get_token_verifier.cache_clear()
+
+
+def test_reads_project_id_from_dotenv(monkeypatch):
+    monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.setattr(
+        firebase_auth,
+        "load_dotenv",
+        lambda: monkeypatch.setenv("FIREBASE_PROJECT_ID", "from-dotenv"),
+    )
+    firebase_auth.get_token_verifier.cache_clear()
+
+    assert firebase_auth.get_token_verifier()._project_id == "from-dotenv"
     firebase_auth.get_token_verifier.cache_clear()
 
 

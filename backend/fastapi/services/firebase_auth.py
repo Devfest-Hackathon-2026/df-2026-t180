@@ -7,6 +7,7 @@ import os
 from functools import lru_cache
 from typing import Protocol
 
+from dotenv import load_dotenv
 from google.auth import exceptions as google_auth_exceptions
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
@@ -48,6 +49,8 @@ class FirebaseTokenVerifier:
 # 起動時やテスト時に設定がなくても動かせるようにするため。
 @lru_cache
 def get_token_verifier() -> TokenVerifier:
+    # .env の FIREBASE_PROJECT_ID / GOOGLE_CLOUD_PROJECT も読む（環境変数が優先）。
+    load_dotenv()
     project_id = os.getenv("FIREBASE_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
     if not project_id:
         raise AuthNotConfigured("FIREBASE_PROJECT_ID is not set")

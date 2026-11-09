@@ -191,6 +191,7 @@ def test_rejects_signed_in_non_admin(client, repository, method, path, body):
 
 
 def test_returns_503_when_sign_in_is_not_configured(client, monkeypatch):
+    monkeypatch.setattr(firebase_auth, "load_dotenv", lambda: None)
     # 検証器の差し替えを外し、プロジェクトIDのない本物の設定を使う。
     app.dependency_overrides.pop(admin_api._verifier)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
