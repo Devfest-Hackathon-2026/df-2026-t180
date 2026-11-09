@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from schemas.common import LocalizedStatement, NonEmptyString
+from schemas.common import LocalizedStatement, Location, NonEmptyString
 
 
 class Candidate(BaseModel):
@@ -17,6 +17,7 @@ class Candidate(BaseModel):
     type: Literal["add", "update", "review"]
     target_rule_id: NonEmptyString | None = None
     review_reason: NonEmptyString | None = None
+    location: Location | None = None
 
     @model_validator(mode="after")
     def validate_candidate_type(self) -> "Candidate":

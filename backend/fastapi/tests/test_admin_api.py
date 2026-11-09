@@ -281,6 +281,19 @@ def test_approving_add_creates_rule(client, repository, edited):
     assert response.json()["rule"]["id"] == "rule_new"
 
 
+@pytest.mark.parametrize("location", [{"lat": 34.5738, "lng": 135.4795}, None])
+def test_approving_add_inherits_location(client, repository, location):
+    # 場所に紐づく Candidate から作った Rule は、同じ location を持つ。
+    candidate = make_candidate("post_1_4", location=location)
+    repository.candidates[candidate.id] = candidate
+
+    response = decide(client, "post_1_4", {"action": "approve"})
+
+    assert response.status_code == 200
+    assert repository.rules["rule_new"].model_dump()["location"] == location
+    assert response.json()["rule"]["location"] == location
+
+
 @pytest.mark.parametrize("edited", [None, EDITED])
 def test_approving_update_replaces_rule_text(client, repository, edited):
     body = {"action": "approve", **({"statement": edited} if edited else {})}

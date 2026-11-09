@@ -215,6 +215,8 @@ def run_candidate_batch(
                         post_id=post_ids[index],
                         region=post.region,
                         status="pending",
+                        # 位置は Gemini に作らせず、元の Post から引き継ぐ。
+                        location=post.location,
                         **draft.model_dump(),
                     )
                 )
@@ -269,6 +271,7 @@ def run_candidate_batch(
             status="pending",
             type="review",
             target_rule_id=rule.id,
+            location=rule.location,
             review_reason=(
                 f"最終更新または最終確認から{stale_years}年以上経過しています。"
                 "内容の確認が必要です。"

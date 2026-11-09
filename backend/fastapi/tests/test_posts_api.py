@@ -87,3 +87,37 @@ def test_create_post_rejects_invalid_payload(client, repository, payload):
 
     assert response.status_code == 422
     assert repository.saved == []
+
+
+def test_create_post_saves_location(client, repository):
+    # 場所に紐づく投稿では、送られた位置をそのまま保存する。
+    location = {"lat": 34.5738, "lng": 135.4795}
+    response = client.post("/api/posts", json={**POST, "location": location})
+
+    assert response.status_code == 201
+    assert repository.saved[0].location.model_dump() == location
+
+
+def test_create_post_without_location_saves_none(client, repository):
+    response = client.post("/api/posts", json=POST)
+
+    assert response.status_code == 201
+    assert repository.saved[0].location is None
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        {"lat": 91, "lng": 135.0},
+        {"lat": 34.5, "lng": 181},
+        {"lat": 34.5},
+        {"lat": 34.5, "lng": 135.0, "alt": 10},
+        "34.5,135.0",
+    ],
+)
+def test_create_post_rejects_invalid_location(client, repository, location):
+    # 範囲外の緯度経度や、形の違う位置は保存しない。
+    response = client.post("/api/posts", json={**POST, "location": location})
+
+    assert response.status_code == 422
+    assert repository.saved == []

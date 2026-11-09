@@ -601,3 +601,30 @@ def test_factory_uses_adc_and_explicit_enterprise_settings(monkeypatch):
         assert "api_key" not in client.call_args.kwargs
         generator.close()
         client.return_value.close.assert_called_once()
+
+
+LOCATION = {"lat": 34.5738, "lng": 135.4795}
+
+
+@pytest.mark.parametrize("location", [LOCATION, None])
+def test_candidate_inherits_location_from_post(location):
+    # 位置は Gemini に作らせず、元の Post の値をそのまま Candidate に入れる。
+    post = Post(text="夜は騒がないでほしい", region="sakai", location=location)
+
+    candidate = run(make_generator(), posts=[post]).posts[0].candidates[0]
+
+    assert candidate.model_dump()["location"] == location
+
+
+def test_stale_candidate_inherits_location_from_rule():
+    rule = Rule(
+        id="r1",
+        region="sakai",
+        statement=STATEMENT,
+        updated_at="2020-01-01T00:00:00Z",
+        location=LOCATION,
+    )
+
+    result = run(make_generator(), posts=[], rules=[rule]).stale_candidates[0]
+
+    assert result.model_dump()["location"] == LOCATION
