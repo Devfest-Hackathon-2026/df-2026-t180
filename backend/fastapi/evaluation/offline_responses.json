@@ -1,0 +1,12 @@
+{
+  "E01": {"candidates": [{"type": "add", "statement": {"ja": "青葉桟橋の入口では、自転車を降りて押してお歩きください。", "en": "At the entrance to Aoba Pier, please dismount and walk your bicycle."}}], "duplicates": []},
+  "E02": {"candidates": [{"type": "update", "target_rule_id": "e02-hours", "statement": {"ja": "月舟庭園は17時に閉園します。", "en": "Tsukifune Garden closes at 5 pm."}}], "duplicates": []},
+  "E03": {"candidates": [{"type": "review", "target_rule_id": "e03-pets", "review_reason": "既存案内はペット同伴禁止ですが、投稿では犬同伴可能との主張があり、管理者による確認が必要です。", "statement": {"ja": "星見池の遊歩道はペット同伴禁止です。", "en": "Pets are not allowed on the Hoshimi Pond walking path."}}], "duplicates": []},
+  "E04": {"candidates": [], "duplicates": [{"source": "rule", "id": "e04-noise", "reason": "風鈴横丁で21時以降に大声を控えるという意味が同じです。"}]},
+  "E05": {"candidates": [], "duplicates": [{"source": "candidate", "id": "e05-pending", "reason": "虹橋広場でごみを持ち帰るという未承認候補と同じ意味です。"}]},
+  "E06": {"candidates": [{"type": "add", "statement": {"ja": "白帆市場の休憩室では通話をお控えください。", "en": "Please refrain from phone calls in the lounge at Shiraho Market."}}, {"type": "add", "statement": {"ja": "白帆市場の通路では自転車を押してお歩きください。", "en": "Please walk your bicycle in the aisles of Shiraho Market."}}], "duplicates": []},
+  "E07": {"candidates": [], "duplicates": []},
+  "E08": {"candidates": [], "duplicates": []},
+  "E09": {"candidates": [{"type": "add", "statement": {"ja": "土日の朝7時から9時のみ、朝凪住宅の東側路地では騒音への配慮のため、スーツケースを引きずらず持ち上げてお運びください。雨の日は対象外です。", "en": "On Saturdays and Sundays, only between 7 and 9 am, please carry your suitcase rather than drag it in the alley east of Asanagi Housing, to reduce noise. This request does not apply on rainy days."}}], "duplicates": []},
+  "E10": {"candidates": [{"type": "add", "statement": {"ja": "霞灯公園の花壇には入らないでください。", "en": "Please stay out of the flower beds in Kasumiakari Park."}}], "duplicates": []}
+}
