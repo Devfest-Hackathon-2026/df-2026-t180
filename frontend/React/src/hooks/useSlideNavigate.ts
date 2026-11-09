@@ -39,21 +39,31 @@ export function useSlideNavigate<T>(current: T) {
    */
   const shown = pending && current === pending.from ? pending.value : current;
 
-  function go(value: T, to: string, event?: MouseEvent, options?: NavigateOptions) {
+  /**
+   * `to` can be a function: it is called when the slide lands, so anything that changed during the
+   * slide (such as the language, #32) is reflected in where it goes.
+   */
+  function go(
+    value: T,
+    to: string | (() => string),
+    event?: MouseEvent,
+    options?: NavigateOptions,
+  ) {
+    const target = () => (typeof to === "function" ? to() : to);
     // Let the browser handle new-tab and new-window clicks as usual.
     if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
     event?.preventDefault();
     if (value === shown) return;
     window.clearTimeout(timer.current);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      navigate(to, options);
+      navigate(target(), options);
       return;
     }
     const from = current;
     setPending({ value, from });
     timer.current = window.setTimeout(() => {
       // Skip if the visitor went elsewhere mid-slide (e.g. the back button).
-      if (latest.current === from) navigate(to, options);
+      if (latest.current === from) navigate(target(), options);
     }, SLIDE_MS);
   }
 
