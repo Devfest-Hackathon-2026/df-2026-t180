@@ -20,7 +20,7 @@
 
 .intro {
   display: flex;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-2) 0 var(--space-4);
@@ -30,13 +30,6 @@
   display: grid;
   gap: var(--space-1);
   min-width: 0;
-}
-
-.region {
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
 }
 
 .meta {
@@ -107,6 +100,37 @@
 /* Document */
 .doc {
   padding-top: var(--space-4);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.group + .group {
+  margin-top: var(--space-6);
+}
+
+.groupLabel {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.sortNote {
+  color: var(--color-ink-soft);
+  font: 600 12px var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+.distance {
+  margin-left: auto;
+  color: var(--color-ink);
+  font: 700 12px var(--font-mono);
 }
 
 .rules {

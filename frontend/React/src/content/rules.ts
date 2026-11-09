@@ -1,25 +1,36 @@
-import type { Region, Rule } from "./types";
+import type { PinnedRule, Region, Rule } from "./types";
 
-/** Fictional sample data. Replaced by GET /api/regions/{id}/rules once the API is ready. */
+/**
+ * Sample data for the demo region (Sakai, Osaka). The rules are illustrative, labelled as samples
+ * in the UI, and positions are approximate. Replaced by GET /api/regions/{id}/rules.
+ */
 export const regions: Region[] = [
-  { id: "midorigawa", name: { ja: "緑川町", en: "Midorigawa" }, sample: true },
+  {
+    id: "sakai",
+    name: { ja: "堺市", en: "Sakai" },
+    parent: { ja: "大阪府 ・ 日本", en: "Osaka, Japan" },
+    sample: true,
+    center: { lat: 34.5705, lng: 135.4765 },
+    zoom: 14,
+  },
 ];
 
 export const rules: Rule[] = [
   {
     id: "rule_001",
-    region: "midorigawa",
+    region: "sakai",
     category: "manners",
     statement: {
-      ja: "竹林の路地の奥は私道です。写真は入口から撮ってください。",
-      en: "The bamboo alley is a private road. Please take photos from the entrance.",
+      ja: "拝所では静かにお参りしてください。柵の中には入れません。",
+      en: "Please be quiet at the worship place. The fenced area is off limits.",
     },
     updatedAt: "2026-11-06",
-    pin: { name: { ja: "竹林の路地", en: "Bamboo Alley" }, x: 42, y: 34 },
+    location: { lat: 34.5612, lng: 135.4873 },
+    place: { ja: "仁徳天皇陵古墳 拝所", en: "Daisen Kofun worship place" },
   },
   {
     id: "rule_002",
-    region: "midorigawa",
+    region: "sakai",
     category: "manners",
     statement: {
       ja: "夜9時以降は住宅街で静かにお願いします。",
@@ -29,18 +40,19 @@ export const rules: Rule[] = [
   },
   {
     id: "rule_003",
-    region: "midorigawa",
+    region: "sakai",
     category: "manners",
     statement: {
-      ja: "川沿いの小道では自転車を押して歩いてください。",
-      en: "Please walk your bike along the riverside lane.",
+      ja: "芝生広場にゴミを残さないでください。",
+      en: "Please leave no rubbish on the park lawns.",
     },
     updatedAt: "2026-11-01",
-    pin: { name: { ja: "川沿いの小道", en: "Riverside Lane" }, x: 38, y: 62 },
+    location: { lat: 34.5566, lng: 135.4842 },
+    place: { ja: "大仙公園", en: "Daisen Park" },
   },
   {
     id: "rule_004",
-    region: "midorigawa",
+    region: "sakai",
     category: "manners",
     statement: {
       ja: "町にゴミ箱はほとんどありません。ゴミは持ち帰ってください。",
@@ -50,71 +62,76 @@ export const rules: Rule[] = [
   },
   {
     id: "rule_005",
-    region: "midorigawa",
+    region: "sakai",
     category: "transport",
     statement: {
-      ja: "東通りのバスは、午後は1時間に1本です。",
-      en: "Buses from East St. run once an hour in the afternoon.",
+      ja: "駅前のバス乗り場は行き先ごとに分かれています。乗る前に番号を確認してください。",
+      en: "Bus stops outside the station are split by destination. Check the stop number first.",
     },
     updatedAt: "2026-11-07",
-    pin: { name: { ja: "東通りバス停", en: "East St. Bus Stop" }, x: 60, y: 40 },
+    location: { lat: 34.5753, lng: 135.4832 },
+    place: { ja: "堺東駅 バス乗り場", en: "Sakai-higashi Sta. bus stops" },
   },
   {
     id: "rule_006",
-    region: "midorigawa",
+    region: "sakai",
     category: "transport",
     statement: {
-      ja: "バスは前のドアから乗ります。交通系ICカードが使えます。",
-      en: "Board the bus at the front door. Transit IC cards work.",
+      ja: "路線バスでは交通系ICカードが使えます。",
+      en: "Transit IC cards work on local buses.",
     },
     updatedAt: "2026-11-02",
   },
   {
     id: "rule_007",
-    region: "midorigawa",
+    region: "sakai",
     category: "transport",
     statement: {
       ja: "駅前の道路に車を停めないでください。",
       en: "Please don't park on the road outside the station.",
     },
     updatedAt: "2026-10-30",
+    location: { lat: 34.5813, lng: 135.465 },
+    place: { ja: "堺駅前", en: "Outside Sakai Sta." },
   },
   {
     id: "rule_008",
-    region: "midorigawa",
+    region: "sakai",
     category: "living",
     statement: {
-      ja: "朝市は現金のみの店が多く、正午に閉まります。",
-      en: "Most morning-market stalls are cash only and close at noon.",
+      ja: "現金のみのお店もあります。",
+      en: "Some shops take cash only.",
     },
     updatedAt: "2026-11-05",
-    pin: { name: { ja: "朝市通り", en: "Market Street" }, x: 50, y: 53 },
+    location: { lat: 34.5741, lng: 135.4756 },
+    place: { ja: "山之口商店街", en: "Yamanokuchi shopping street" },
   },
   {
     id: "rule_009",
-    region: "midorigawa",
+    region: "sakai",
     category: "living",
     statement: {
-      ja: "古井戸の水は飲めません。",
-      en: "The water in the old well is not safe to drink.",
+      ja: "夜間は公園の駐車場が閉まります。",
+      en: "The park car park closes at night.",
     },
     updatedAt: "2026-11-03",
-    pin: { name: { ja: "古井戸の広場", en: "Old Well Square" }, x: 62, y: 68 },
+    location: { lat: 34.5779, lng: 135.4593 },
+    place: { ja: "大浜公園", en: "Ohama Park" },
   },
   {
     id: "rule_010",
-    region: "midorigawa",
+    region: "sakai",
     category: "living",
     statement: {
-      ja: "商店の多くは水曜日が定休日です。",
-      en: "Many shops are closed on Wednesdays.",
+      ja: "ゴミは決められた日の朝に出してください。",
+      en: "Put rubbish out on the morning of its collection day.",
     },
     updatedAt: "2026-10-26",
   },
 ];
 
-export const pinnedRules = rules.filter((rule): rule is Rule & { pin: NonNullable<Rule["pin"]> } =>
-  Boolean(rule.pin),
+export const pinnedRules = rules.filter((rule): rule is PinnedRule =>
+  Boolean(rule.location && rule.place),
 );
 
 export const findRegion = (id: string | undefined) => regions.find((region) => region.id === id);

@@ -1,13 +1,7 @@
-import type { Localised, Lang } from "@/content/types";
 import styles from "./MapPlaceholder.module.css";
 
-const labels: { x: number; y: number; text: Localised }[] = [
-  { x: 548, y: 472, text: { ja: "緑川駅", en: "Midorigawa Sta." } },
-  { x: 330, y: 300, text: { ja: "竹林", en: "Bamboo grove" } },
-];
-
-/** Static drawing that stands in for the map until Google Maps is integrated. */
-export function MapPlaceholder({ lang }: { lang: Lang }) {
+/** Static drawing used when the Google Maps API is unavailable (no key, or the key is rejected). */
+export function MapPlaceholder() {
   return (
     <svg className={styles.map} viewBox="0 0 1000 1000" aria-hidden="true">
       <rect width="1000" height="1000" fill="var(--map-land)" />
@@ -68,14 +62,6 @@ export function MapPlaceholder({ lang }: { lang: Lang }) {
         fill="var(--color-ink-soft)"
         transform="rotate(-18 522 439)"
       />
-
-      <g className={styles.labels}>
-        {labels.map((label) => (
-          <text key={label.x} x={label.x} y={label.y}>
-            {label.text[lang]}
-          </text>
-        ))}
-      </g>
     </svg>
   );
 }

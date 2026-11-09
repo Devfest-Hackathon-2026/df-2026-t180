@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { categories, t } from "@/content/copy";
-import type { Category, Lang, Pin, Region, Rule } from "@/content/types";
+import type { Category, Lang, LatLng, PinnedRule, Region } from "@/content/types";
 import type { Params } from "@/content/url";
 import { CategoryIcon } from "./CategoryIcon";
 import { GuideContent } from "./GuideContent";
@@ -22,7 +22,7 @@ export type SheetMode = "half" | "full";
 type Props = {
   mode: SheetMode;
   region: Region;
-  rule?: Rule & { pin: Pin };
+  rule?: PinnedRule;
   tab: Category;
   lang: Lang;
   linkTo: (patch: Params) => string;
@@ -32,6 +32,8 @@ type Props = {
   collapseTo: string;
   /** Controls that ride on top of the half sheet on phones, such as the location button. */
   above?: ReactNode;
+  /** The visitor's position, used to sort place rules when no pin is open. */
+  me?: LatLng;
 };
 
 type Target = "full" | "half" | "closed";
@@ -43,7 +45,7 @@ const desktop = () => window.matchMedia("(min-width: 900px)").matches;
  * arrow) expands it into the regional guide, dragging down or × returns to the map. No page change.
  */
 export function PlaceSheet(props: Props) {
-  const { mode, region, rule, tab, lang, linkTo, closeTo, expandTo, collapseTo, above } = props;
+  const { mode, region, rule, tab, lang, linkTo, closeTo, expandTo, collapseTo, above, me } = props;
   const navigate = useNavigate();
   const sheetRef = useRef<HTMLElement>(null);
   const grabRef = useRef<HTMLDivElement>(null);
@@ -154,7 +156,10 @@ export function PlaceSheet(props: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [closeTo, navigate]);
 
-  const title = rule ? rule.pin.name[lang] : region.name[lang];
+  // "Daisen Park, Sakai" / 「大仙公園・堺市」; just the area when the guide opens from search.
+  const title = rule
+    ? `${rule.place[lang]}${lang === "ja" ? "・" : ", "}${region.name[lang]}`
+    : region.name[lang];
 
   return (
     <section
@@ -201,6 +206,7 @@ export function PlaceSheet(props: Props) {
         <h2 className={styles.title} id="sheet-title">
           {title}
         </h2>
+        <p className={styles.parent}>{region.parent[lang]}</p>
       </div>
 
       <div ref={scrollerRef} className={styles.scroller}>
@@ -224,8 +230,8 @@ export function PlaceSheet(props: Props) {
             lang={lang}
             tab={tab}
             focusedId={rule?.id}
-            showName={Boolean(rule)}
             linkTo={linkTo}
+            origin={rule?.location ?? me}
           />
         </div>
       </div>

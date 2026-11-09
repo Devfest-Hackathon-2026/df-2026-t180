@@ -1,8 +1,9 @@
 import { Link } from "react-router";
 import { categories, categoryOrder, t } from "@/content/copy";
 import { formatDate, lastUpdated, rules } from "@/content/rules";
-import type { Category, Lang, Region } from "@/content/types";
+import type { Category, Lang, LatLng, Region, Rule } from "@/content/types";
 import type { Params } from "@/content/url";
+import { distanceKm } from "@/hooks/useMyLocation";
 import { CategoryIcon } from "./CategoryIcon";
 import { Icon } from "./Icon";
 import { Mascot } from "./Mascot";
@@ -13,23 +14,75 @@ type Props = {
   lang: Lang;
   tab: Category;
   focusedId?: string;
-  /** Whether to repeat the region name; the sheet header already shows it when no pin is open. */
-  showName: boolean;
   /** Builds a link to the current screen with some params changed. */
   linkTo: (patch: Params) => string;
+  /** Reference point for "nearest first": the tapped pin, or the visitor when location is on. */
+  origin?: LatLng;
 };
 
+/** 0.12 km → "120 m", 1.24 km → "1.2 km". */
+const formatDistance = (km: number) =>
+  km < 1 ? `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m` : `${km.toFixed(1)} km`;
+
 /** A region's published rules as a readable document, split into category tabs. */
-export function GuideContent({ region, lang, tab, focusedId, showName, linkTo }: Props) {
+export function GuideContent(props: Props) {
+  const { region, lang, tab, focusedId, linkTo, origin } = props;
   const regionRules = rules.filter((rule) => rule.region === region.id);
   const shown = regionRules.filter((rule) => rule.category === tab);
+  // Rules without a place apply to the whole area: a short fixed list first.
+  const areaWide = shown.filter((rule) => !rule.location);
+  // Place rules: nearest first from the pin or the visitor, otherwise newest first.
+  const distance = (rule: Rule) =>
+    origin && rule.location ? distanceKm(origin, rule.location) : undefined;
+  const byPlace = shown
+    .filter((rule) => rule.location)
+    .sort((a, b) =>
+      origin ? distance(a)! - distance(b)! : b.updatedAt.localeCompare(a.updatedAt),
+    );
+
+  const item = (rule: Rule, index: number) => {
+    const km = distance(rule);
+    return (
+      <li
+        key={rule.id}
+        id={rule.id}
+        className={styles.rule}
+        data-focused={rule.id === focusedId || undefined}
+      >
+        <span className={styles.number} aria-hidden="true">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <div className={styles.body}>
+          <p className={styles.statement}>{rule.statement[lang]}</p>
+          <div className={styles.ruleMeta}>
+            <time dateTime={rule.updatedAt}>{formatDate(rule.updatedAt)}</time>
+            {rule.location && rule.place && (
+              <Link
+                className={styles.pinLink}
+                to={linkTo({ spot: rule.id, region: undefined, sheet: undefined })}
+                aria-label={`${t("showOnMap", lang)}: ${rule.place[lang]}`}
+                preventScrollReset
+              >
+                <Icon name="pin" size={16} />
+                {rule.place[lang]}
+              </Link>
+            )}
+            {km !== undefined && (
+              <span className={styles.distance}>
+                {km < 0.02 ? t("here", lang) : formatDistance(km)}
+              </span>
+            )}
+          </div>
+        </div>
+      </li>
+    );
+  };
   const updated = lastUpdated(region.id);
 
   return (
     <div className={styles.guide} data-category={tab}>
       <div className={styles.intro}>
         <div className={styles.introText}>
-          {showName && <h3 className={styles.region}>{region.name[lang]}</h3>}
           <p className={styles.meta}>
             {regionRules.length} {t("rules", lang)}
             <span aria-hidden="true">·</span>
@@ -63,37 +116,23 @@ export function GuideContent({ region, lang, tab, focusedId, showName, linkTo }:
         <h3 className="sr-only" id="tab-heading">
           {categories[tab].label[lang]}
         </h3>
-        <ol className={styles.rules}>
-          {shown.map((rule, index) => (
-            <li
-              key={rule.id}
-              id={rule.id}
-              className={styles.rule}
-              data-focused={rule.id === focusedId || undefined}
-            >
-              <span className={styles.number} aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <div className={styles.body}>
-                <p className={styles.statement}>{rule.statement[lang]}</p>
-                <div className={styles.ruleMeta}>
-                  <time dateTime={rule.updatedAt}>{formatDate(rule.updatedAt)}</time>
-                  {rule.pin && (
-                    <Link
-                      className={styles.pinLink}
-                      to={linkTo({ spot: rule.id, region: undefined, sheet: undefined })}
-                      aria-label={`${t("showOnMap", lang)}: ${rule.pin.name[lang]}`}
-                      preventScrollReset
-                    >
-                      <Icon name="pin" size={16} />
-                      {rule.pin.name[lang]}
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
+        {areaWide.length > 0 && (
+          <div className={styles.group}>
+            <h4 className={styles.groupLabel}>{t("areaWide", lang)}</h4>
+            <ol className={styles.rules}>{areaWide.map((rule, i) => item(rule, i))}</ol>
+          </div>
+        )}
+        {byPlace.length > 0 && (
+          <div className={styles.group}>
+            <h4 className={styles.groupLabel}>
+              {t("byPlace", lang)}
+              <span className={styles.sortNote}>{t(origin ? "nearest" : "newest", lang)}</span>
+            </h4>
+            <ol className={styles.rules}>
+              {byPlace.map((rule, i) => item(rule, areaWide.length + i))}
+            </ol>
+          </div>
+        )}
       </section>
     </div>
   );

@@ -3,27 +3,32 @@ export type Category = "manners" | "transport" | "living";
 
 export type Localised = Record<Lang, string>;
 
-/** A place on the map that a rule is about. */
-export type Pin = {
-  name: Localised;
-  /** Position on the placeholder map, as a percentage of its width and height. */
-  x: number;
-  y: number;
-};
+/** Optional location on a rule, as agreed with the backend: Post, Candidate and Rule get lat/lng. */
+export type LatLng = { lat: number; lng: number };
 
 /** One published rule. Mirrors the team's public JSON format (id, region, statement, updated_at). */
 export type Rule = {
   id: string;
   region: string;
+  /** UI field, not yet in the backend schema: drives the Manners / Transport / Living tabs. */
   category: Category;
   statement: Localised;
   updatedAt: string;
-  pin?: Pin;
+  /** Only rules with a location get a pin on the map; all rules appear in the regional guide. */
+  location?: LatLng;
+  /** UI field, not yet in the backend schema: the place name shown as the sheet title. */
+  place?: Localised;
 };
+
+export type PinnedRule = Rule & { location: LatLng; place: Localised };
 
 export type Region = {
   id: string;
   name: Localised;
-  /** Fictional sample data is always labelled as such in the UI. */
+  /** The wider area it belongs to, shown under the title (e.g. Osaka, Japan). */
+  parent: Localised;
+  /** Sample data is always labelled as such in the UI. */
   sample: boolean;
+  center: LatLng;
+  zoom: number;
 };

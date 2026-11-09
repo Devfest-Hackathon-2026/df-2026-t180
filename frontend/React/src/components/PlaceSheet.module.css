@@ -120,6 +120,12 @@
   letter-spacing: -0.01em;
 }
 
+.parent {
+  margin-top: 2px;
+  color: var(--color-ink-soft);
+  font-size: 14px;
+}
+
 .sheet[data-mode="full"] .title {
   font-size: 26px;
   font-weight: 700;

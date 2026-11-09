@@ -21,6 +21,8 @@ const paths = {
   close: <path d="m6 6 12 12M18 6 6 18" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
   back: <path d="M19 12H5M11 6l-6 6 6 6" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  send: <path d="M21 3 3 10.4l7.2 2.9L13.6 21 21 3zM10.2 13.3 15 8.6" />,
   arrowUpRight: <path d="M7 17 17 7M9 7h8v8" />,
   pin: (
     <>

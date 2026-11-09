@@ -5,7 +5,7 @@ import { href, readLang } from "@/content/url";
 import styles from "./LanguageSwitch.module.css";
 
 const options: { lang: Lang; label: string; name: string }[] = [
-  { lang: "ja", label: "JA", name: "日本語" },
+  { lang: "ja", label: "JP", name: "日本語" },
   { lang: "en", label: "EN", name: "English" },
 ];
 

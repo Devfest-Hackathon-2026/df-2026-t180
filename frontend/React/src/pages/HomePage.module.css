@@ -5,35 +5,6 @@
   overflow: hidden;
 }
 
-.mapRegion {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  container-type: size;
-  background: var(--map-land);
-}
-
-.canvas {
-  --pan-x: 0%;
-  --pan-y: 0%;
-  --lift: 0cqh;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(max(100cqw, 100cqh) * 1.25);
-  aspect-ratio: 1;
-  translate: calc(-50% + var(--pan-x)) calc(-50% + var(--pan-y) - var(--lift));
-  transition: translate var(--duration-pan) var(--ease-out);
-}
-
-.canvas[data-panned] {
-  --lift: 18cqh;
-}
-
-.mapRegion[data-loading] .canvas {
-  animation: pulse 1400ms ease-in-out infinite;
-}
-
 /* Header */
 .top {
   position: absolute;
@@ -87,6 +58,31 @@
   background: var(--color-highlight-soft);
   border: var(--border);
   border-radius: var(--radius-full);
+}
+
+.backTo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  min-height: 44px;
+  padding: 0 var(--space-4) 0 var(--space-3);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--color-highlight);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  animation: rise var(--duration-slow) var(--ease-spring);
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.backTo:hover {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
 }
 
 .results {
@@ -215,12 +211,12 @@
   background: #3c4043;
 }
 
-/* Dock and nav */
+/* Dock: desktop only (bottom-right controls). Phones use the nav row below instead. */
 .dock {
+  display: none;
   position: absolute;
   inset: auto var(--space-4) calc(88px + env(safe-area-inset-bottom));
   z-index: 3;
-  display: grid;
   gap: var(--space-3);
   pointer-events: none;
 }
@@ -247,7 +243,7 @@
 .wordmark {
   font: 700 26px/48px var(--font-sans);
   letter-spacing: -0.02em;
-  color: var(--color-ink-soft);
+  color: var(--color-ink);
   -webkit-text-stroke: 5px var(--color-surface);
   paint-order: stroke fill;
   white-space: nowrap;
@@ -255,29 +251,15 @@
   pointer-events: none;
 }
 
-.nav {
-  position: absolute;
-  bottom: max(var(--space-4), env(safe-area-inset-bottom));
-  left: 50%;
-  z-index: 3;
-  width: min(300px, calc(100% - 32px));
-  translate: -50% 0;
+.wordmarkAbove {
+  padding-left: var(--space-1);
+  line-height: 1.2;
 }
 
 /* Phones: the sheet carries the controls and covers the nav while it is open. */
 .shell[data-sheet] .dock,
-.shell[data-sheet] .nav {
+.shell[data-sheet] .bottom {
   visibility: hidden;
-}
-
-.shell[data-sheet="full"] .canvas {
-  --lift: 0cqh;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.55;
-  }
 }
 
 @keyframes hop {
@@ -331,10 +313,6 @@
     margin-left: calc(var(--stroke) + var(--space-5) + 200px + var(--space-4));
   }
 
-  .canvas[data-panned] {
-    --lift: 0cqh;
-  }
-
   .dock {
     inset: auto auto var(--space-6) var(--space-6);
     width: 400px;
@@ -348,8 +326,12 @@
     gap: var(--space-4);
   }
 
-  .nav {
+  .bottom {
     display: none;
+  }
+
+  .dock {
+    display: grid;
   }
 
   .shell[data-sheet] .dock {
