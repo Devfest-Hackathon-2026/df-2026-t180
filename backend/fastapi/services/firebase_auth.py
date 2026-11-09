@@ -12,7 +12,9 @@ verify_firebase_token を直接使う方法との比較）:
   一時的な通信障害（503）を区別できる
 - 追加の依存は firebase-admin のみ（google-auth・google-cloud-firestore と共存できる）
 
-SDK が検証しない auth_time（認証日時）だけは、ここで「過去の日時であること」を確認する。
+SDK が検証しない auth_time（認証日時）は、ここで「過去の日時であること」を確認する。
+また SDK は時刻が NaN や Infinity のときに比較をすり抜けるため、exp・iat・auth_time が
+有限の数値であることもここで確認する（exp=Infinity の無期限トークンなどを防ぐ）。
 
 トークンの失効（Firebase 側でのアカウント無効化・リフレッシュトークンの失効）は
 確認しない（check_revoked=False）。管理者権限の取り消しは Firestore の admins から
@@ -20,7 +22,9 @@ UID を削除して行い、次のリクエストから即座に 403 になる�
 管理者のリクエストごとに Firebase への通信が増えるため、必要になった時点で有効にする。
 """
 
+import math
 import os
+import threading
 import time
 from collections.abc import Callable
 from functools import lru_cache
@@ -66,14 +70,32 @@ class _NoCredentials(credentials.Base):
         return AnonymousCredentials()
 
 
+_app_lock = threading.Lock()
+
+
 def _app(project_id: str) -> firebase_admin.App:
+    # 最初のリクエストが同時に来ても初期化は 1 回だけにする（2 回目の
+    # initialize_app は「既にある」というエラーになるため）。
     name = f"{APP_NAME}-{project_id}"
-    try:
-        return firebase_admin.get_app(name)
-    except ValueError:
-        return firebase_admin.initialize_app(
-            _NoCredentials(), options={"projectId": project_id}, name=name
-        )
+    with _app_lock:
+        try:
+            return firebase_admin.get_app(name)
+        except ValueError:
+            return firebase_admin.initialize_app(
+                _NoCredentials(), options={"projectId": project_id}, name=name
+            )
+
+
+def _time_claim(claims: dict, name: str) -> float:
+    """exp・iat・auth_time を有限の数値として取り出す。そうでなければ InvalidToken。"""
+    value = claims.get(name)
+    if (
+        not isinstance(value, int | float)
+        or isinstance(value, bool)
+        or not math.isfinite(value)
+    ):
+        raise InvalidToken("invalid Firebase ID token")
+    return value
 
 
 class FirebaseTokenVerifier:
@@ -94,12 +116,13 @@ class FirebaseTokenVerifier:
             # 内部の例外の内容はレスポンスに出さない。
             raise InvalidToken("invalid Firebase ID token") from None
 
-        auth_time = claims.get("auth_time")
-        if (
-            not isinstance(auth_time, int | float)
-            or isinstance(auth_time, bool)
-            or auth_time > self._clock()
-        ):
+        now = self._clock()
+        expires = _time_claim(claims, "exp")
+        issued = _time_claim(claims, "iat")
+        signed_in = _time_claim(claims, "auth_time")
+        # SDK も exp・iat を確認するが、NaN では比較が常に偽になり通ってしまうため、
+        # 有限の値であることを確かめてから改めて比べる（時計のずれは SDK と同じく 0）。
+        if expires <= now or issued > now or signed_in > now:
             raise InvalidToken("invalid Firebase ID token")
         uid = claims.get("uid")
         if not isinstance(uid, str) or not uid:
