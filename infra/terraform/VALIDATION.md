@@ -1,5 +1,45 @@
 # ローカル検証結果
 
+## 2026-11-10：Cloud Run再デプロイ・PR前検証
+
+- Docker linux/amd64 build・Artifact Registry push成功。
+- タグ: `admin-20261110002854-b574f67`
+- digest: `sha256:89a47f21a0d318eb8d08316cdb9424221353b24fd8a1f32a45fdf78bdeab3645`
+- push結果とArtifact Registryから取得したdigestの一致を確認。
+- 保存planのJSON比較で既存Serviceのimage以外に差分なし。
+- apply成功：0 added / 1 changed / 0 destroyed。IAM・Rules変更なし。
+- revision `hack26-api-00002-fxf`: Ready、トラフィック100%。
+- URL: https://hack26-api-b3ghqrsk3q-an.a.run.app
+- Cloud Run IAM認証をX-Serverless-Authorizationに渡して確認：
+  - GET /openapi.json: 200、A・C・Dの合計7エンドポイント登録。
+  - GET /api/regions: 200（実Firestore読み取り）。
+  - Firebase IDトークンなしのGET /api/admin/candidates: 401。
+- 適用後terraform plan: No changes。allow_public_api=false。
+- Firestoreへのテスト書き込みは未実施。実書き込み成功の証跡は今回の検証範囲にはない。
+- 管理者実ユーザーでの成功・403、採否更新、Emulator結合テスト9件は後続確認。
+- state・tfvars・バックアップ・plan・秘密情報はGit管理対象外。
+- PR前にpytestを再実行：443 passed / 9 skipped。Ruff check・format、Terraform fmt・validate成功。
+
+以下は過去の検証時点の記録。
+
+## 2026-11-10：機能D取り込み後
+
+- Terraform変更を4a31017へ保護後、origin/main a16945aをb574f67でmerge。競合なし。
+- PR #31のmerge a4474e2を確認。アプリコードの独自変更なし。
+- pytest: 443 passed / 9 skipped（Firestore Emulator未設定）。
+- ruff check / format --check: 成功（35 files）。
+- terraform fmt -check -recursive / validate、git diff --check: 成功。
+- Docker linux/amd64 build: 成功、hack26-fastapi:local。
+- 一時コンテナのHTTP OpenAPIでA/Cの3本とDの4本を確認。
+- 未認証GET /api/admin/candidates、GET /api/admin/rulesは401。コンテナ停止済み。
+- Firebase Admin SDK 7.7.0のissuer検証とアプリのauth_time有限数値・未来日時検証を確認。
+  署名付きJWTテストで不正issuer/auth_time等を拒否。実Firebaseユーザーでの確認は未実施。
+- IAM5権限とFIREBASE_PROJECT_IDは対応済み。allow_public_api=falseを維持。
+- state・tfvarsの検証前後のSHA256は一致。
+- GCP変更 / Docker push / Terraform plan・applyは未実施。
+
+以下は過去時点の記録（現在のデプロイ状態を示すものではない）。
+
 実施日: 2026-11-09（Asia/Tokyo）
 
 ## Security Rules統合後の検証

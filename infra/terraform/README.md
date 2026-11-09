@@ -4,6 +4,13 @@
 このREADMEのapply・pushは**将来、GCP変更の事前承認を得た後に実行する手順**。
 開発ルールに従い、API有効化を含む変更内容をDiscordで事前相談する。
 
+2026-11-10時点で基盤・IAM・Security Rulesを適用済み、Cloud Runへ機能A・C・Dを
+デプロイ済み。最新revisionは `hack26-api-00002-fxf`、`allow_public_api=false`。
+OpenAPIの7エンドポイント、Firestoreのregions読み取り（HTTP 200）、Firebase未認証の
+管理者API（401）、適用後planのNo changesを確認した。Firestore実書き込み成功は
+今回の検証では確認していない。既存データを変更するテストは実施しない。
+以下の初回手順・過去時点の調査結果は運用履歴として残す。
+
 ## 管理範囲
 
 | 対象 | 定義 |
@@ -61,6 +68,8 @@ Docker pushには対象リポジトリへの書き込み権限が必要。
 実行SAにこれらの管理権限は付けない。
 
 ## 初回デプロイ（事前承認後のみ）
+
+既にServiceと基盤を適用済みの場合、初回手順を繰り返さず末尾の再デプロイ手順を使う。
 
 空のArtifact Registryにはまだイメージが存在しないため、二段階でapplyする。
 `-target` や仮のサンプルイメージは使わない。
@@ -275,3 +284,45 @@ Firebase IDトークンを `Authorization: Bearer ...` で送り、Cloud Run到�
 401/403/正常管理者アクセスを実環境で確認する。トークン自体をログ出力しない。
 Firebase Hosting rewriteだけではCloud Run IAM認証をFirebase認証で満たせない。
 一般公開はDのトークン・管理者検証完了後の別承認とし、今は `allow_public_api=false` を維持する。
+
+## 機能D取り込み後の再デプロイ（承認後のみ）
+
+2026-11-10、PR #31のmerge（a4474e2）を含むorigin/main（a16945a）を取り込み済み。
+管理者APIはGET/PATCHの `/api/admin/candidates`・`/api/admin/rules` 系4本。
+Firebase Admin SDK 7.7.0で署名・issuer・audience・期限等を検証し、アプリで
+auth_timeの有限数値・未来日時を確認、毎回admins/{uid}の存在で管理者認可する。
+check_revokedは無効。アカウント無効化だけで即拒否する運用ではなく、管理者解除は
+adminsからのUID削除で行う。実ユーザーによる401/403/成功確認は公開前に必要。
+
+現行の5権限で読み取り・作成・差分更新・トランザクションに対応する。
+Firebaseのトークン検証のために実行SAへRules管理権限やFirebase管理権限を追加しない。
+FIREBASE_PROJECT_ID / GOOGLE_CLOUD_PROJECTはともにhack26-projectを維持する。
+
+以下は次回以降の再デプロイ手順。2026-11-10に同じ流れで再デプロイ済み。
+
+```powershell
+# リポジトリルート。検証済みコードから新しい一意タグを作る。
+$revision = git rev-parse --short HEAD
+$imageTag = "asia-northeast1-docker.pkg.dev/hack26-project/hack26-backend/fastapi:admin-$revision"
+docker tag hack26-fastapi:local $imageTag
+# 事前承認後のみ実行
+docker push $imageTag
+gcloud artifacts docker images describe $imageTag --project=hack26-project --format='value(image_summary.digest)'
+```
+
+取得したdigestでローカルterraform.tfvarsのapi_imageだけを更新する。
+deploy_api=true / allow_public_api=falseを維持し、stateを保全する。
+旧bootstrap.tfplan・rules-review.tfplanを使わず、新規計画を作る。
+
+```powershell
+terraform -chdir=infra/terraform fmt -check -recursive
+terraform -chdir=infra/terraform validate
+terraform -chdir=infra/terraform plan '-out=admin-redeploy.tfplan'
+```
+
+想定はServiceのimage更新。公開IAM追加やDB再作成・Rules変更など別の差分が出た場合は停止して確認する。
+計画を承認してからのみ、その計画をapplyする。Terraform外のgcloud run deployで上書きしない。
+適用後は新revision・digest・環境変数を確認し、OpenAPIと管理者認可を検証する。
+private ServiceのCloud Run IAM用トークンとアプリ用Firebase IDトークンは別物なので、
+Firebaseトークンだけで呼び出せると解釈しない。実ユーザー検証の経路を準備してから実施する。
+採否APIはexpected_versionによる競合検出もあるため、対応した最新フロントと組み合わせる。
