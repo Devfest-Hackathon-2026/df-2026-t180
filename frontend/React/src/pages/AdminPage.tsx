@@ -2,6 +2,7 @@ import { type CSSProperties, useCallback, useEffect, useRef, useState } from "re
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import {
   AdminApiError,
+  type AdminRule,
   decideCandidate,
   editRule,
   listCandidates,
@@ -35,6 +36,19 @@ const today = () => new Date().toISOString().slice(0, 10);
 const UNDO_MS = 5000;
 
 type Load = "loading" | "ready" | "failed";
+/** Why a save didn't happen: an error, or someone else changed the rule first (409). */
+type Alert = "saveFailed" | "changed";
+
+const alertFor = (error: unknown): Alert =>
+  error instanceof AdminApiError && error.status === 409 ? "changed" : "saveFailed";
+
+/** A candidate's view of its target rule after that rule was saved. */
+const currentOf = (rule: AdminRule): NonNullable<Candidate["current"]> => ({
+  statement: rule.statement,
+  updatedAt: rule.updatedAt,
+  lastReviewedAt: rule.lastReviewedAt,
+  version: rule.version,
+});
 
 /**
  * Admin (機能D): review the candidate queue and edit published rules. With Firebase configured
@@ -52,10 +66,15 @@ export function AdminPage() {
   const [items, setItems] = useState<Candidate[]>(adminLive ? [] : sampleCandidates);
   const [load, setLoad] = useState<Load>(adminLive ? "loading" : "ready");
   const [reload, setReload] = useState(0);
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [alert, setAlert] = useState<Alert>();
   // Decisions already sent can no longer be undone.
   const [sent, setSent] = useState<ReadonlySet<string>>(new Set());
   const originals = useRef(new Map<string, Candidate>());
+  // The latest list, for decisions sent after their undo window (the closure's copy is older).
+  const latest = useRef(items);
+  useEffect(() => {
+    latest.current = items;
+  });
   const queued = useRef(new Map<string, { timer: number; send: () => void }>());
 
   const tab: CandidateType = types.includes(params.type as CandidateType)
@@ -132,7 +151,7 @@ export function AdminPage() {
     const original = items.find((c) => c.id === id);
     if (!original) return;
     originals.current.set(id, original);
-    setSaveFailed(false);
+    setAlert(undefined);
     setItems((all) =>
       all.map((c) =>
         c.id === id
@@ -149,8 +168,20 @@ export function AdminPage() {
     const send = () => {
       queued.current.delete(id);
       setSent((all) => new Set(all).add(id));
-      decideCandidate(id, decision, statement)
-        .then((decided) => setItems((all) => all.map((c) => (c.id === id ? decided : c))))
+      // Send the rule version as it is now: another approval may have updated it meanwhile.
+      const candidate = latest.current.find((c) => c.id === id) ?? original;
+      decideCandidate(candidate, decision, statement)
+        .then(({ candidate: decided, rule }) => {
+          // Other candidates about the same rule now show (and will send) its new version.
+          const refresh = (c: Candidate): Candidate =>
+            rule && c.id !== id && c.targetRuleId === rule.id
+              ? { ...c, current: currentOf(rule) }
+              : c;
+          for (const [key, saved] of originals.current) {
+            originals.current.set(key, refresh(saved));
+          }
+          setItems((all) => all.map((c) => (c.id === id ? decided : refresh(c))));
+        })
         .catch((error) => {
           if (leave(error)) return;
           setSent((all) => {
@@ -159,8 +190,8 @@ export function AdminPage() {
             return next;
           });
           restore(id);
-          setSaveFailed(true);
-          // Someone else decided it meanwhile: fetch the queue again.
+          setAlert(alertFor(error));
+          // Someone else decided it or changed its rule meanwhile: fetch the queue again.
           if (error instanceof AdminApiError && error.status === 409) setReload((n) => n + 1);
         });
     };
@@ -211,9 +242,9 @@ export function AdminPage() {
           {ta("sampleData", lang)}
         </p>
       )}
-      {saveFailed && (
+      {alert && (
         <p className={styles.alert} role="alert">
-          {ta("saveFailed", lang)}
+          {ta(alert, lang)}
         </p>
       )}
 
@@ -302,6 +333,8 @@ type RuleRow = {
   id: string;
   statement: Localised;
   updatedAt: string;
+  /** From the admin API; sample rows have none. */
+  version?: string;
   category?: Category;
   place?: Localised;
 };
@@ -323,7 +356,7 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
   const [draft, setDraft] = useState<Localised>({ ja: "", en: "" });
   const [saved, setSaved] = useState<string>();
   const [saving, setSaving] = useState(false);
-  const [saveFailed, setSaveFailed] = useState(false);
+  const [alert, setAlert] = useState<Alert>();
 
   useEffect(() => {
     if (!adminLive) return;
@@ -343,23 +376,31 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
     };
   }, [reload, onLeave]);
 
-  async function save(id: string) {
-    setSaveFailed(false);
-    let updatedAt = today();
+  async function save(row: RuleRow) {
+    setAlert(undefined);
+    let saved: Pick<RuleRow, "statement" | "updatedAt" | "version"> = {
+      statement: draft,
+      updatedAt: today(),
+    };
     if (adminLive) {
       setSaving(true);
       try {
-        updatedAt = (await editRule(id, draft)).updatedAt;
+        const rule = await editRule(row.id, draft, row.version ?? "");
+        saved = { statement: rule.statement, updatedAt: rule.updatedAt, version: rule.version };
       } catch (error) {
         setSaving(false);
-        if (!onLeave(error)) setSaveFailed(true);
+        if (onLeave(error)) return;
+        setAlert(alertFor(error));
+        // Changed by someone else: reload the list (and its version) but keep this draft open.
+        // Saving again then replaces their change knowingly.
+        if (error instanceof AdminApiError && error.status === 409) setReload((n) => n + 1);
         return;
       }
       setSaving(false);
     }
-    setItems((all) => all.map((r) => (r.id === id ? { ...r, statement: draft, updatedAt } : r)));
+    setItems((all) => all.map((r) => (r.id === row.id ? { ...r, ...saved } : r)));
     setEditing(undefined);
-    setSaved(id);
+    setSaved(row.id);
   }
 
   if (load === "loading") return <Loading lang={lang} />;
@@ -376,9 +417,9 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
 
   return (
     <>
-      {saveFailed && (
+      {alert && (
         <p className={styles.alert} role="alert">
-          {ta("saveFailed", lang)}
+          {ta(alert, lang)}
         </p>
       )}
       <ul className={styles.rules}>
@@ -454,7 +495,7 @@ function RulesView({ lang, onLeave }: { lang: Lang; onLeave: (error: unknown) =>
                     type="button"
                     className={styles.primary}
                     disabled={saving || !draft.ja.trim() || !draft.en.trim()}
-                    onClick={() => void save(rule.id)}
+                    onClick={() => void save(rule)}
                   >
                     {ta("save", lang)}
                   </button>

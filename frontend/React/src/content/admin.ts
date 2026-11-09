@@ -21,7 +21,13 @@ export type Candidate = {
   /** The resident's original post, for candidates that came from a post. */
   post?: { text: string; reason?: string; place?: string; createdAt: string };
   /** The published rule this candidate would change or re-check. */
-  current?: { statement: Localised; updatedAt: string; lastReviewedAt?: string };
+  current?: {
+    statement: Localised;
+    updatedAt: string;
+    lastReviewedAt?: string;
+    /** Sent back when approving, so the server can refuse if the rule changed meanwhile. */
+    version?: string;
+  };
 };
 
 export const sampleCandidates: Candidate[] = [
@@ -175,6 +181,10 @@ const strings = {
   saveFailed: {
     ja: "保存できませんでした。もう一度お試しください",
     en: "Couldn't save. Please try again",
+  },
+  changed: {
+    ja: "ほかの管理者が先に変更したため保存していません。最新の内容を読み込みました",
+    en: "Not saved: another admin changed this first. The latest version is now shown",
   },
   retry: { ja: "再読み込み", en: "Reload" },
   sampleData: {
