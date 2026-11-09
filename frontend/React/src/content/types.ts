@@ -25,7 +25,7 @@ export type PinnedRule = Rule & { location: LatLng; place: Localised };
 export type Region = {
   id: string;
   name: Localised;
-  /** The wider area it belongs to, shown under the title (e.g. Osaka, Japan). */
+  /** The prefecture it belongs to, shown under the title (e.g. 大阪府 / Osaka). */
   parent: Localised;
   /** Sample data is always labelled as such in the UI. */
   sample: boolean;

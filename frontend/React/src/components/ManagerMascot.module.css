@@ -1,0 +1,155 @@
+/*
+ * Two stacked SVGs: .back sits behind the card, .front (the hands) in front of it.
+ * The wrapper is 170px wide; the card's top edge falls 102px down (y 96 of 110 in the drawing).
+ */
+.mascot {
+  --lx: 0;
+  --ly: 0;
+  position: relative;
+  width: 170px;
+  aspect-ratio: 160 / 110;
+  pointer-events: none;
+}
+
+/* Head only, for the admin header. */
+.badge {
+  --lx: 0;
+  --ly: 0;
+  position: relative;
+  flex: none;
+  width: 40px;
+  aspect-ratio: 92 / 102;
+}
+
+.back,
+.front {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.back {
+  z-index: 0;
+}
+
+.front {
+  z-index: 2;
+}
+
+/* Breathes behind the card while the hands stay on the edge. */
+.body {
+  animation: breathe 3.2s ease-in-out infinite;
+}
+
+.sprout {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: sway 4s ease-in-out infinite;
+}
+
+.eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  translate: calc(var(--lx) * 4px) calc(var(--ly) * 3px);
+  transition: translate 160ms var(--ease-out);
+  animation: blink 4.6s infinite;
+}
+
+.handLeft,
+.handRight {
+  transition: translate var(--duration-slow) var(--ease-spring);
+}
+
+/* Password: both hands come up over the glasses. */
+.mascot[data-state="password"] .handLeft {
+  translate: 14px -38px;
+}
+
+.mascot[data-state="password"] .handRight {
+  translate: -14px -38px;
+}
+
+/* Something is wrong: a small head shake. */
+.mascot[data-state="error"] .body {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: shake 420ms ease-in-out;
+}
+
+/* Signed in: a hop and a wave. */
+.mascot[data-state="happy"] .body {
+  animation: hop 520ms var(--ease-spring);
+}
+
+.mascot[data-state="happy"] .handRight {
+  translate: 12px -34px;
+  rotate: 20deg;
+}
+
+.question {
+  font: 700 26px var(--font-sans);
+  fill: var(--g-blue);
+  animation: pop 2.4s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+@keyframes sway {
+  50% {
+    rotate: -6deg;
+  }
+}
+
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    scale: 1 1;
+  }
+  95% {
+    scale: 1 0.1;
+  }
+}
+
+@keyframes shake {
+  25% {
+    rotate: -5deg;
+  }
+  75% {
+    rotate: 5deg;
+  }
+}
+
+@keyframes hop {
+  40% {
+    translate: 0 -10px;
+  }
+}
+
+@keyframes pop {
+  50% {
+    translate: 0 -4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .body,
+  .sprout,
+  .eyes,
+  .question,
+  .mascot[data-state] .body {
+    animation: none;
+  }
+
+  .eyes,
+  .handLeft,
+  .handRight {
+    transition: none;
+  }
+}

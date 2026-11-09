@@ -1,12 +1,11 @@
 import { Link } from "react-router";
 import { categories, categoryOrder, t } from "@/content/copy";
-import { formatDate, lastUpdated, rules } from "@/content/rules";
+import { formatDate, rules } from "@/content/rules";
 import type { Category, Lang, LatLng, Region, Rule } from "@/content/types";
 import type { Params } from "@/content/url";
 import { distanceKm } from "@/hooks/useMyLocation";
 import { CategoryIcon } from "./CategoryIcon";
 import { Icon } from "./Icon";
-import { Mascot } from "./Mascot";
 import styles from "./GuideContent.module.css";
 
 type Props = {
@@ -24,7 +23,38 @@ type Props = {
 const formatDistance = (km: number) =>
   km < 1 ? `${Math.max(10, Math.round((km * 1000) / 10) * 10)} m` : `${km.toFixed(1)} km`;
 
-/** A region's published rules as a readable document, split into category tabs. */
+type TabsProps = Pick<Props, "region" | "lang" | "tab" | "linkTo">;
+
+/**
+ * The Manners / Transport / Living tabs with each category's count. Rendered by the sheet in its
+ * fixed header, outside the scroll area, so they never move while the rules scroll.
+ */
+export function GuideTabs({ region, lang, tab, linkTo }: TabsProps) {
+  const regionRules = rules.filter((rule) => rule.region === region.id);
+  return (
+    <nav className={styles.tabs} aria-label={t("categoriesNav", lang)}>
+      {categoryOrder.map((category) => (
+        <Link
+          key={category}
+          className={styles.tab}
+          data-category={category}
+          to={linkTo({ tab: category })}
+          aria-current={category === tab ? "page" : undefined}
+          replace
+          preventScrollReset
+        >
+          <CategoryIcon category={category} size={18} />
+          <span>{categories[category].label[lang]}</span>
+          <span className={styles.count}>
+            {regionRules.filter((rule) => rule.category === category).length}
+          </span>
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/** A region's published rules for one category tab, as a readable document. */
 export function GuideContent(props: Props) {
   const { region, lang, tab, focusedId, linkTo, origin } = props;
   const regionRules = rules.filter((rule) => rule.region === region.id);
@@ -77,41 +107,9 @@ export function GuideContent(props: Props) {
       </li>
     );
   };
-  const updated = lastUpdated(region.id);
 
   return (
     <div className={styles.guide} data-category={tab}>
-      <div className={styles.intro}>
-        <div className={styles.introText}>
-          <p className={styles.meta}>
-            {regionRules.length} {t("rules", lang)}
-            <span aria-hidden="true">·</span>
-            {t("updated", lang)} <time dateTime={updated}>{formatDate(updated)}</time>
-          </p>
-        </div>
-        <Mascot className={styles.mascot} size={96} />
-      </div>
-
-      <nav className={styles.tabs} aria-label={t("categoriesNav", lang)}>
-        {categoryOrder.map((category) => (
-          <Link
-            key={category}
-            className={styles.tab}
-            data-category={category}
-            to={linkTo({ tab: category })}
-            aria-current={category === tab ? "page" : undefined}
-            replace
-            preventScrollReset
-          >
-            <CategoryIcon category={category} size={18} />
-            <span>{categories[category].label[lang]}</span>
-            <span className={styles.count}>
-              {regionRules.filter((rule) => rule.category === category).length}
-            </span>
-          </Link>
-        ))}
-      </nav>
-
       <section className={styles.doc} aria-labelledby="tab-heading">
         <h3 className="sr-only" id="tab-heading">
           {categories[tab].label[lang]}

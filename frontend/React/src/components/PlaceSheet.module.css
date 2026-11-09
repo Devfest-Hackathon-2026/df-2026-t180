@@ -131,6 +131,13 @@
   font-weight: 700;
 }
 
+.tabsBar {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  padding: 0 var(--sheet-pad);
+}
+
 .scroller {
   position: relative;
   flex: 1;
