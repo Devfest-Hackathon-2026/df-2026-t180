@@ -44,6 +44,27 @@ Posts are merged and approved before they become rules, so the guide stays a cur
 - The place picker needs the live map. Without a key the confirm button stays disabled.
 - Sending is mocked and goes to the thank-you screen, which says an admin checks posts before they are published. It becomes `POST /api/posts` when the endpoint (#10) is ready.
 
+## Admin (機能D)
+
+| Sign-in | Candidates | Published rules | Desktop (English) |
+| --- | --- | --- | --- |
+| ![Sign-in](screenshots/admin-login.jpg) | ![Candidates](screenshots/admin-candidates.jpg) | ![Rules](screenshots/admin-rules.jpg) | ![Desktop](screenshots/admin-desktop.jpg) |
+
+Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/rules`. Same tokens and components as the visitor side, with a 管理 tag next to the brand so admins always know where they are.
+
+- **Candidates.** Three tabs with pending counts: 新規 (add), 更新 (update), 経年確認 (re-check). Each card shows what the admin needs to decide and nothing else: the resident post, the current rule (for update and re-check), why it needs a re-check, and the JP/EN text that will be published.
+- **Actions** follow the #24 proposal:
+
+  | Candidate | 採用 / 問題なし | 修正して採用 | 却下 |
+  | --- | --- | --- | --- |
+  | 新規 add | new rule | new rule with edited text | nothing published |
+  | 更新 update | rule text replaced | edited text | rule unchanged |
+  | 経年確認 review | 問題なし: only the last-checked date moves | edited text | rule unchanged |
+
+- A decided card collapses to one row with 元に戻す (undo), so a mis-tap is cheap. When a tab is cleared, the mascot says so.
+- **Published rules** can be edited directly; saving moves the updated date.
+- Sign-in, decisions and edits are mocked in local state. They become Firebase sign-in, `PATCH /api/admin/candidates/{id}` (`{"action": "approve" | "reject", "statement"?: {ja, en}}`) and `PATCH /api/admin/rules/{id}`.
+
 ## Direction
 
 Google's own visual language, as used on the DevFest GDGoC Japan Hackathon site: light grey ground, white surfaces with 2px ink outlines, Google blue, red, yellow and green, pill shapes, small monospace tags and bold Google Sans headlines. Hover states are playful: outlined things lift with a hard offset shadow, arrows turn, dots hop.
@@ -113,6 +134,8 @@ Desktop, 900px and wider: one outlined header pill across the top (brand, search
 | `Select` | Single-choice dropdown in the app style | closed, open, invalid | ARIA select-only combobox: arrows, Home/End, Enter/Space, Escape, type to jump; closes on outside tap |
 | `GuideContent`   | Region intro, category tabs and rules inside the sheet | category tab; focused rule                   | tabs are a nav with `aria-current`, 48px; rules are an ordered list                        |
 | Rule card        | One published statement                                | default, hover, focused                      | ordered list; pin chip named "Show on map: place", 44px hit area                           |
+| `AdminHeader` | Admin brand, 候補 / 公開ルール switch, JP/EN, sign out | mobile, desktop | nav with `aria-current`; each page has a screen-reader `h1` |
+| `CandidateCard` | One candidate in the admin queue | add, update, review; approved, rejected (collapsed with undo) | list item labelled by its `h2`; editor fields labelled 日本語 / 英語; 44px buttons |
 
 ## Review states
 
@@ -206,4 +229,4 @@ All motion stops under `prefers-reduced-motion: reduce`.
 
 ## Mocked
 
-Search matching and all rules are static sample data. The location button uses the browser Geolocation API: it asks for permission on the first tap, then the mascot stands on the visitor's position (YouMarker) and follows them while it is on. Tapping again turns it off: the mascot disappears, tracking stops, the position is forgotten and the map stays where it is. The position stays in the browser and is never sent. Away from the demo region (over 15 km), a 「堺市に戻る」 pill moves the map back. Refusing shows the location-off notice. For presentations, `?demo=1` makes the button place the visitor at a fixed spot in central 堺市 (near the city office, zoomed out one step to show the pins) without asking for permission; it sticks for the browser tab, and `?demo=0` or closing the tab turns it off. The map is the Google Maps JavaScript API when `VITE_GOOGLE_MAPS_API_KEY` is set in `.env` (markers are `AdvancedMarker`s with our own design, using `VITE_GOOGLE_MAP_ID`); without a key, or if the key is rejected, the static placeholder drawing is shown instead. Sending the resident form is mocked.
+Search matching and all rules are static sample data. The location button uses the browser Geolocation API: it asks for permission on the first tap, then the mascot stands on the visitor's position (YouMarker) and follows them while it is on. Tapping again turns it off: the mascot disappears, tracking stops, the position is forgotten and the map stays where it is. The position stays in the browser and is never sent. Away from the demo region (over 15 km), a 「堺市に戻る」 pill moves the map back. Refusing shows the location-off notice. For presentations, `?demo=1` makes the button place the visitor at a fixed spot in central 堺市 (near the city office, zoomed out one step to show the pins) without asking for permission; it sticks for the browser tab, and `?demo=0` or closing the tab turns it off. The map is the Google Maps JavaScript API when `VITE_GOOGLE_MAPS_API_KEY` is set in `.env` (markers are `AdvancedMarker`s with our own design, using `VITE_GOOGLE_MAP_ID`); without a key, or if the key is rejected, the static placeholder drawing is shown instead. Sending the resident form is mocked, and so is the admin side (see Admin).

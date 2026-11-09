@@ -1,0 +1,109 @@
+.page {
+  width: min(960px, 100%);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 0 var(--space-4) var(--space-10);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-5);
+  width: min(420px, 100%);
+  margin: var(--space-10) auto 0;
+  padding: var(--space-6);
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-hard);
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.input {
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  font-size: 16px;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  outline: none;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.input:focus {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.input[aria-invalid] {
+  background: var(--g-red-light);
+}
+
+.error {
+  padding: var(--space-3) var(--space-4);
+  color: var(--g-red-deep);
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--g-red-light);
+  border-radius: var(--radius-sm);
+}
+
+.submit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 4px 4px 4px var(--space-5);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--color-highlight);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.circle {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--color-on-ink);
+  background: var(--color-ink);
+  border-radius: 50%;
+  transition: rotate var(--duration-slow) var(--ease-spring);
+}
+
+.submit:hover {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.submit:hover .circle {
+  rotate: 45deg;
+}
+
+@media (min-width: 720px) {
+  .page {
+    padding: 0 var(--space-6) var(--space-10);
+  }
+}

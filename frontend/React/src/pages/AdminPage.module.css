@@ -1,0 +1,225 @@
+.page {
+  width: min(960px, 100%);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 0 var(--space-4) var(--space-10);
+}
+
+/* Candidate type tabs */
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 0 calc(var(--space-4) * -1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 700;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.tab[aria-current] {
+  background: var(--color-highlight);
+  box-shadow: var(--shadow-hard-sm);
+  translate: -1px -1px;
+}
+
+.count {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  color: var(--color-on-ink);
+  font: 700 12px var(--font-mono);
+  background: var(--color-ink);
+  border-radius: var(--radius-full);
+}
+
+.list,
+.rules {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  font-weight: 600;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* Published rules */
+.rule {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+}
+
+.ruleHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.place {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.date {
+  margin-left: auto;
+  color: var(--color-ink-soft);
+  font: 600 12px var(--font-mono);
+}
+
+.ruleBody {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.langs {
+  display: grid;
+  flex: 1;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.langRow {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.langRow dd {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.langLabel {
+  color: var(--color-ink-soft);
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+.editor,
+.editField {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.editor {
+  gap: var(--space-3);
+}
+
+.textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: 15px;
+  line-height: 1.6;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+  resize: vertical;
+}
+
+.textarea:focus {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.editActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.primary,
+.secondary {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  border: var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out);
+}
+
+.primary {
+  background: var(--color-highlight);
+}
+
+.secondary {
+  background: var(--color-surface);
+}
+
+.primary:hover:not(:disabled),
+.secondary:hover {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  padding: 2px var(--space-3);
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--g-green-light);
+  border-radius: var(--radius-full);
+}
+
+@media (min-width: 720px) {
+  .page {
+    padding: 0 var(--space-6) var(--space-10);
+  }
+
+  .tabs {
+    margin: 0;
+    padding: var(--space-3) 0;
+  }
+}
