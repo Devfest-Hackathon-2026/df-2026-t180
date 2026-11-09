@@ -82,6 +82,7 @@ def decide_candidate(
             region=candidate.region,
             statement=statement,
             updated_at=now,
+            location=candidate.location,
         )
         return _approved(candidate, rule), rule
 

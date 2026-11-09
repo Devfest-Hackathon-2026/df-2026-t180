@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from schemas.common import LocalizedStatement, NonEmptyString
+from schemas.common import LocalizedStatement, Location, NonEmptyString
 
 
 class Candidate(BaseModel):
@@ -17,6 +17,7 @@ class Candidate(BaseModel):
     type: Literal["add", "update", "review"]
     target_rule_id: NonEmptyString | None = None
     review_reason: NonEmptyString | None = None
+    location: Location | None = None
     # 管理者が実際に公開・確認した文（機能D が採用時に入れる）。statement は Gemini の
     # 提案文のまま残す。却下・未判断では None。
     decided_statement: LocalizedStatement | None = None

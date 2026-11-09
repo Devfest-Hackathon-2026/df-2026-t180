@@ -454,6 +454,20 @@ def test_approving_several_adds_creates_separate_rules(client, repository):
     )
 
 
+@pytest.mark.parametrize("location", [{"lat": 34.5738, "lng": 135.4795}, None])
+def test_approving_add_inherits_location(client, repository, location):
+    # 場所に紐づく Candidate から作った Rule は、同じ location を持つ。
+    candidate = make_candidate("post_1_4", location=location)
+    repository.candidates[candidate.id] = candidate
+
+    response = decide(client, "post_1_4", {"action": "approve"})
+
+    assert response.status_code == 200
+    rule_id = response.json()["rule"]["id"]
+    assert repository.rules[rule_id].model_dump()["location"] == location
+    assert response.json()["rule"]["location"] == location
+
+
 @pytest.mark.parametrize("edited", [None, EDITED])
 def test_approving_update_replaces_rule_text(client, repository, edited):
     response = decide(client, "post_1_2", approve(repository, edited))
