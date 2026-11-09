@@ -154,6 +154,16 @@ def decide(
     return repository.run_transaction(work)
 
 
+@router.get("/rules")
+def list_rules(
+    _: AdminUid,
+    repository: Repository,
+    region: str | None = None,
+) -> list[Rule]:
+    """公開ルールの一覧（編集画面用）。新しく更新されたものから。"""
+    return repository.list_rules(region=region)
+
+
 @router.patch("/rules/{rule_id}")
 def update_rule(
     rule_id: str,

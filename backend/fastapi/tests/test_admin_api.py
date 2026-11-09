@@ -121,6 +121,10 @@ class FakeAdminRepository:
     def get_rules(self, rule_ids):
         return {i: self.rules[i] for i in rule_ids if i in self.rules}
 
+    def list_rules(self, *, region):
+        rules = [r for r in self.rules.values() if region is None or r.region == region]
+        return sorted(rules, key=lambda r: r.updated_at, reverse=True)
+
     def run_transaction(self, work):
         transaction = FakeTransaction(self)
         result = work(transaction)
@@ -158,6 +162,7 @@ def client(repository):
 
 ENDPOINTS = [
     ("get", "/api/admin/candidates", None),
+    ("get", "/api/admin/rules", None),
     ("patch", "/api/admin/candidates/post_1_1", {"action": "approve"}),
     ("patch", "/api/admin/rules/rule_1", {"statement": EDITED}),
 ]
@@ -359,7 +364,21 @@ def test_unknown_candidate_is_not_found(client):
     assert response.status_code == 404
 
 
-# --- 公開ルールの編集 -------------------------------------------------------
+# --- 公開ルールの一覧・編集 -------------------------------------------------
+
+
+def test_lists_rules_newest_first(client, repository):
+    repository.rules["rule_2"] = Rule(
+        id="rule_2", region="sakai", statement=statement("新しいルール"), updated_at=NOW
+    )
+    repository.rules["rule_3"] = Rule(
+        id="rule_3", region="osaka", statement=statement("別の地域"), updated_at=NOW
+    )
+
+    response = client.get("/api/admin/rules?region=sakai", headers=AUTH)
+
+    assert response.status_code == 200
+    assert [r["id"] for r in response.json()] == ["rule_2", "rule_1"]
 
 
 def test_edits_rule_text_and_moves_updated_at(client, repository):

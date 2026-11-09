@@ -77,6 +77,7 @@ FastAPI がトークンを検証し、`admins` コレクションに UID が登�
 | --- | --- | --- |
 | GET | `/api/admin/candidates` | 候補の一覧。`status`（既定 `pending`、`all` で全件）・`type`・`region` で絞り込み。元の投稿と対象ルールの現在の内容を含む |
 | PATCH | `/api/admin/candidates/{id}` | `{"action": "approve" \| "reject", "statement"?: {ja, en}}`。判断済みなら 409 |
+| GET | `/api/admin/rules` | 公開ルールの一覧（`region` で絞り込み）。新しく更新されたものから |
 | PATCH | `/api/admin/rules/{id}` | `{"statement": {ja, en}}`。`updated_at` を更新 |
 
 採否の扱い（#24）は `services/admin_decisions.py` に書いています。

@@ -43,6 +43,7 @@ class AdminRepository(Protocol):
     ) -> list[Candidate]: ...
     def get_posts(self, post_ids: Iterable[str]) -> dict[str, StoredPost]: ...
     def get_rules(self, rule_ids: Iterable[str]) -> dict[str, Rule]: ...
+    def list_rules(self, *, region: str | None) -> list[Rule]: ...
     def run_transaction(self, work: Callable[[AdminTransaction], T]) -> T: ...
 
 
@@ -120,6 +121,14 @@ class FirestoreAdminRepository:
 
     def get_rules(self, rule_ids: Iterable[str]) -> dict[str, Rule]:
         return {s.id: _rule(s) for s in self._get_all(RULES_COLLECTION, rule_ids)}
+
+    def list_rules(self, *, region: str | None) -> list[Rule]:
+        query = self._client.collection(RULES_COLLECTION)
+        if region is not None:
+            query = query.where(filter=FieldFilter("region", "==", region))
+        rules = (_rule(s) for s in query.stream())
+        # 新しく更新されたものから並べる。
+        return sorted(rules, key=lambda r: r.updated_at, reverse=True)
 
     def run_transaction(self, work: Callable[[AdminTransaction], T]) -> T:
         # 候補とルールを同じトランザクションで読み書きし、二重採用や途中失敗を防ぐ。
