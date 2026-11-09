@@ -63,7 +63,7 @@
 
 .message[data-from="draft"] .bubble {
   width: 100%;
-  background: var(--g-yellow-light);
+  background: var(--g-blue-light);
   border-radius: 20px 20px 6px;
 }
 

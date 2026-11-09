@@ -65,7 +65,7 @@ Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/
 - **Header.** One pill switch only: 候補 / 公開ルール. The candidate filters 新規 (add), 更新 (update), 経年確認 (re-check) are flat tabs with pending counts and a sliding underline; they roll down under the switch on 候補 and roll away on 公開ルール. Sign out is an icon (named ログアウト / Sign out for screen readers), so the row does not shift when the language changes. Decisions and counts are kept while switching between the two views.
 - **Each card reads as a short chat**, so it stays compact:
   - the resident (住民) on the left: their post and place, nothing else (their "why" is left out; the worry says enough);
-  - the draft rule (公開案) on the right: the UI language in bold, the other language small beneath. When it would replace a live rule, that rule is quoted at the top like a chat reply (公開中);
+  - the draft rule (公開案) on the right, in a light blue bubble (so it never mixes with the yellow re-check notes): the UI language in bold, the other language small beneath. When it would replace a live rule, that rule is quoted at the top like a chat reply (公開中);
   - a re-check reason is a centred system note, like a chat's date line. For a re-check the right bubble is the live rule itself, so it is labelled 公開中.
 - Region and date sit top right in Google Sans Flex; no section labels or dividers.
 - **Actions** are three equal pills in one row, colour-coded and without icons: 採用 / 問題なし (green), 修正 (orange), 却下 (red); English: Approve / Still OK, Edit, Reject. They follow the #24 proposal:
