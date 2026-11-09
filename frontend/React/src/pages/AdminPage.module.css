@@ -133,18 +133,41 @@
   font-weight: 600;
 }
 
+.ruleFoot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  margin: calc(var(--space-2) * -1) 0;
+}
+
 .date {
-  margin-left: auto;
   color: var(--color-ink-soft);
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
 }
 
-.ruleBody {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
+/* Pencil: same icon-only treatment as sign out, pinned to the bottom-right corner. */
+.editIcon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 calc(var(--space-2) * -1) 0 auto;
+  color: var(--color-ink-soft);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition:
+    color var(--duration-base) ease,
+    background-color var(--duration-base) ease;
+}
+
+.editIcon:hover {
+  color: var(--color-ink);
+  background: var(--color-bg);
 }
 
 .langs {
@@ -203,6 +226,7 @@
 .editActions {
   display: flex;
   gap: var(--space-2);
+  margin-left: auto;
 }
 
 .primary,

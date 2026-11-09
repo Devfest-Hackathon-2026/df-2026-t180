@@ -68,7 +68,7 @@ Routes: `/admin` (sign-in), `/admin/candidates?type=add|update|review`, `/admin/
 
 - 修正 turns the draft bubble into JP/EN fields at full width, with 保存 / やめる.
 - A decided card collapses to one row with 元に戻す (undo), so a mis-tap is cheap. When a tab is cleared, the mascot says so.
-- **Published rules** can be edited directly; saving moves the updated date.
+- **Published rules** card: category and place on top, JP/EN text at full width, and a footer with the updated date on the left and a pencil icon (named 編集 / Edit plus the rule, for screen readers) in the bottom-right corner. Editing swaps the text for JP/EN fields and the pencil for やめる / 保存 in the same footer; saving moves the updated date and shows 保存しました.
 - Sign-in, decisions and edits are mocked in local state. They become Firebase sign-in, `PATCH /api/admin/candidates/{id}` (`{"action": "approve" | "reject", "statement"?: {ja, en}}`) and `PATCH /api/admin/rules/{id}`.
 
 ## Direction

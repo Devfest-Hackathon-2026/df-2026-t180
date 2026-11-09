@@ -153,9 +153,6 @@ function RulesView({ lang }: { lang: Lang }) {
                 {rule.place[lang]}
               </span>
             )}
-            <span className={styles.date}>
-              {ta("updatedAt", lang)} {formatDate(rule.updatedAt)}
-            </span>
           </div>
 
           {editing === rule.id ? (
@@ -173,7 +170,38 @@ function RulesView({ lang }: { lang: Lang }) {
                   />
                 </label>
               ))}
+            </div>
+          ) : (
+            <dl className={styles.langs}>
+              {(["ja", "en"] as const).map((l) => (
+                <div key={l} className={styles.langRow}>
+                  <dt className={styles.langLabel}>{l === "ja" ? "JP" : "EN"}</dt>
+                  <dd lang={l}>{rule.statement[l]}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          {/* Footer: when it was last updated on the left, the edit control on the right. */}
+          <div className={styles.ruleFoot}>
+            <span className={styles.date}>
+              {ta("updatedAt", lang)} {formatDate(rule.updatedAt)}
+            </span>
+            {saved === rule.id && (
+              <span className={styles.saved} role="status">
+                <Icon name="check" size={14} strokeWidth={2.4} />
+                {ta("savedRule", lang)}
+              </span>
+            )}
+            {editing === rule.id ? (
               <div className={styles.editActions}>
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => setEditing(undefined)}
+                >
+                  {ta("cancel", lang)}
+                </button>
                 <button
                   type="button"
                   className={styles.primary}
@@ -182,45 +210,23 @@ function RulesView({ lang }: { lang: Lang }) {
                 >
                   {ta("save", lang)}
                 </button>
-                <button
-                  type="button"
-                  className={styles.secondary}
-                  onClick={() => setEditing(undefined)}
-                >
-                  {ta("cancel", lang)}
-                </button>
               </div>
-            </div>
-          ) : (
-            <div className={styles.ruleBody}>
-              <dl className={styles.langs}>
-                {(["ja", "en"] as const).map((l) => (
-                  <div key={l} className={styles.langRow}>
-                    <dt className={styles.langLabel}>{l === "ja" ? "JP" : "EN"}</dt>
-                    <dd lang={l}>{rule.statement[l]}</dd>
-                  </div>
-                ))}
-              </dl>
+            ) : (
               <button
                 type="button"
-                className={styles.secondary}
+                className={styles.editIcon}
+                aria-label={`${ta("editRule", lang)}: ${rule.statement[lang]}`}
+                title={ta("editRule", lang)}
                 onClick={() => {
                   setDraft(rule.statement);
                   setEditing(rule.id);
                   setSaved(undefined);
                 }}
               >
-                {ta("editRule", lang)}
+                <Icon name="edit" size={20} />
               </button>
-            </div>
-          )}
-
-          {saved === rule.id && (
-            <p className={styles.saved} role="status">
-              <Icon name="check" size={16} strokeWidth={2.4} />
-              {ta("savedRule", lang)}
-            </p>
-          )}
+            )}
+          </div>
         </li>
       ))}
     </ul>
