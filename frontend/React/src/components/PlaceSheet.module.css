@@ -135,6 +135,8 @@
   position: relative;
   z-index: 2;
   flex: none;
+  /* The guide tabs size themselves to this bar, not to the screen. */
+  container: guide-tabs / inline-size;
   padding: 0 var(--sheet-pad);
 }
 

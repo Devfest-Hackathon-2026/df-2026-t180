@@ -22,6 +22,12 @@ The title is the place (大仙公園 / Daisen Park); the line under it is the ci
 
 The category tabs sit directly under this header and are part of it, outside the scroll area, so they never move (not even with the bounce at either end). The full sheet has one fixed block and only the rules scroll beneath it (no second sticky layer). The old intro row (rule count, last-updated date, mascot) was removed for this: the tabs already show each category's count, and the mascot appears on empty and error states instead.
 
+## Guide tabs and real data
+
+The guide has four tabs: 「すべて」 (every rule) then マナー / 交通 / 暮らし. Opening the guide from search starts on 「すべて」; tapping a pin starts on that rule's category. 「すべて」 and rules without a category use Google light blue. On narrow sheets (phones and the desktop side panel) the tabs drop their small icons so all four fit; this is sized by the sheet, not the screen.
+
+When the app is connected to the project (Firebase settings in `.env`), the guide loads the region's rules from `GET /api/regions/{id}/rules`. Those rules have no category, place or location yet (#22, #15), so they appear under 「すべて」 only, the category tabs show 0 with 「まだルールはありません」, and the map shows no sample pins rather than mixing sample places with real rules. While loading it shows 「読み込み中…」; if the request fails, 「ルールを読み込めませんでした」. Without the settings everything uses the sample rules.
+
 ## Guide ordering (scales to many rules)
 
 Each category tab has two parts:

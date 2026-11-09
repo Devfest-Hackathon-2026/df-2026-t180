@@ -12,24 +12,32 @@ import { PlaceSheet } from "@/components/PlaceSheet";
 import { StateCard } from "@/components/StateCard";
 import { Tag } from "@/components/Tag";
 import { appName, categoryOrder, t } from "@/content/copy";
+import { adminLive as apiLive } from "@/api/adminAuth";
 import { findRegion, pinnedRules, regions, rules } from "@/content/rules";
-import type { Category, LatLng, Region } from "@/content/types";
+import type { Category, GuideTab, LatLng, Region } from "@/content/types";
 import { href, readLang, type Params } from "@/content/url";
 import { distanceKm, isDemoLocation, useMyLocation } from "@/hooks/useMyLocation";
 import styles from "./HomePage.module.css";
+
+/**
+ * Pins come from the sample rules only. Real rules (from the API when connected) have no location
+ * or place yet (#15, #22), so with a live connection the map shows no sample pins rather than
+ * mixing sample places with real rules; the guide opens from search instead.
+ */
+const mapRules = apiLive ? [] : pinnedRules;
 
 function searchRegions(query: string): Region[] {
   const needle = query.trim().toLowerCase();
   return regions.filter((region) => {
     const names = [region.name.ja, region.name.en];
-    const pins = pinnedRules.filter((rule) => rule.region === region.id);
+    const pins = mapRules.filter((rule) => rule.region === region.id);
     pins.forEach((rule) => names.push(rule.place.ja, rule.place.en));
     return names.some((name) => name.toLowerCase().includes(needle));
   });
 }
 
-const isCategory = (value: string | undefined): value is Category =>
-  categoryOrder.includes(value as Category);
+const isGuideTab = (value: string | undefined): value is GuideTab =>
+  value === "all" || categoryOrder.includes(value as Category);
 
 /** Params that belong to the sheet; cleared together when it closes. */
 const noSheet = { spot: undefined, region: undefined, sheet: undefined, tab: undefined };
@@ -42,7 +50,7 @@ export function HomePage() {
   const { state, q } = params;
 
   const results = q ? searchRegions(q) : [];
-  const selected = pinnedRules.find((rule) => rule.id === params.spot);
+  const selected = mapRules.find((rule) => rule.id === params.spot);
   const isLoading = state === "loading";
   const isError = state === "error";
   const isEmpty = state === "empty" || (Boolean(q) && results.length === 0);
@@ -50,7 +58,8 @@ export function HomePage() {
   // Sheet: a pin opens it at half height; the guide (full) can also open straight from search.
   const sheetRegion = findRegion(selected?.region ?? params.region);
   const sheetMode = selected && params.sheet !== "full" ? "half" : "full";
-  const tab: Category = isCategory(params.tab) ? params.tab : (selected?.category ?? "manners");
+  // A tapped pin opens its rule's category; opening from search shows every rule.
+  const tab: GuideTab = isGuideTab(params.tab) ? params.tab : (selected?.category ?? "all");
   const sheetOpen = Boolean(sheetRegion) && !isLoading && !isError;
   const here = (patch: Params) => href("/", params, patch);
 
@@ -85,7 +94,7 @@ export function HomePage() {
       <LocationButton lang={lang} status={locationStatus} onClick={onLocate} />
     </>
   );
-  const pins: MapPin[] = pinnedRules.map((rule) => ({
+  const pins: MapPin[] = mapRules.map((rule) => ({
     id: rule.id,
     name: rule.place[lang],
     category: rule.category,
@@ -166,9 +175,16 @@ export function HomePage() {
                       <span className={styles.resultText}>
                         <span className={styles.resultName}>{region.name[lang]}</span>
                         <span className={styles.resultMeta}>
-                          {region.sample && <Tag tone="highlight">{t("sample", lang)}</Tag>}
-                          {rules.filter((rule) => rule.region === region.id).length}{" "}
-                          {t("rules", lang)}
+                          {/* Sample label and count only for sample data; real counts are in the guide. */}
+                          {!apiLive && region.sample && (
+                            <Tag tone="highlight">{t("sample", lang)}</Tag>
+                          )}
+                          {!apiLive && (
+                            <>
+                              {rules.filter((rule) => rule.region === region.id).length}{" "}
+                              {t("rules", lang)}
+                            </>
+                          )}
                         </span>
                       </span>
                       <span className={styles.resultArrow} aria-hidden="true">
