@@ -37,7 +37,7 @@ npm install
 npm run dev
 ```
 
-チェック: `npm run lint`、`npm run format:check`、`npm run build`
+チェック: `npm run lint`、`npm run format:check`、`npm run build`、`npm test`（画面のテスト。管理画面の競合時の動きなど）
 
 ルールは静的なサンプルデータ(堺市)です。`.env` に `VITE_GOOGLE_MAPS_API_KEY` があれば Google マップを表示し、キーがない・使えない場合は代わりの静的な地図を表示します。画面の状態は URL で切り替えられます。一覧とデザインの方針は [docs/design/README.md](docs/design/README.md) にあります。
 

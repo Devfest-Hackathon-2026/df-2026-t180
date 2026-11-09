@@ -186,6 +186,9 @@ const strings = {
     ja: "ほかの管理者が先に変更したため保存していません。最新の内容を読み込みました",
     en: "Not saved: another admin changed this first. The latest version is now shown",
   },
+  latestPublished: { ja: "公開中の最新の文", en: "Latest published text" },
+  useLatest: { ja: "最新の文で書き直す", en: "Edit the latest" },
+  overwrite: { ja: "この下書きで上書き", en: "Replace with my draft" },
   retry: { ja: "再読み込み", en: "Reload" },
   sampleData: {
     ja: "サンプルデータで表示中です（保存されません）",
