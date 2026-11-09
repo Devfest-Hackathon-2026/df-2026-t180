@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from unittest.mock import Mock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from schemas.post import StoredPost
 from schemas.rule import Rule
 from services import firebase_auth
 from services.admin_decisions import rule_version
+from services.candidate_generation import GeminiOutput
 from services.firebase_auth import AuthUnavailable, InvalidToken
 
 NOW = datetime(2026, 11, 9, 6, 0, tzinfo=timezone.utc)
@@ -763,3 +765,37 @@ def test_contention_that_never_settles_is_a_conflict(client, repository):
 
     assert response.status_code == 409
     assert repository.candidates["post_1_2"].status == "pending"
+
+
+def test_flag_for_a_candidate_generated_by_the_batch(client, repository):
+    """機能B が記録した版と、機能D の一覧の警告がつながっていること（#39）。"""
+    from services.candidate_generation import run_candidate_batch
+
+    gemini = Mock()
+    gemini.generate.return_value = GeminiOutput(
+        candidates=[
+            {
+                "type": "update",
+                "statement": statement("提案"),
+                "target_rule_id": "rule_1",
+            }
+        ],
+        duplicates=[],
+    )
+    batch = run_candidate_batch(
+        [repository.posts["post_1"]],
+        list(repository.rules.values()),
+        [],
+        generator=gemini,
+        post_ids=["post_7"],
+    )
+    generated = batch.posts[0].candidates[0]
+    repository.candidates[generated.id] = generated
+
+    def flag():
+        body = client.get("/api/admin/candidates", headers=AUTH).json()
+        return {c["id"]: c for c in body}[generated.id]["rule_changed_since_generated"]
+
+    assert flag() is False
+    edit(client, version_of(repository))  # 別の管理者がルールを編集
+    assert flag() is True

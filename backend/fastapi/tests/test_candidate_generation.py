@@ -16,6 +16,7 @@ from services.candidate_generation import (
     GeminiOutput,
     run_candidate_batch,
 )
+from services.rule_versions import rule_version
 
 STATEMENT = {"ja": "静かにしてください。", "en": "Please keep quiet."}
 POST = Post(text="夜は騒がないでほしい", region="sakai")
@@ -601,3 +602,61 @@ def test_factory_uses_adc_and_explicit_enterprise_settings(monkeypatch):
         assert "api_key" not in client.call_args.kwargs
         generator.close()
         client.return_value.close.assert_called_once()
+
+
+# --- 対象ルールの版（#39） --------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("kind", "extra"),
+    [
+        ("update", {"target_rule_id": "r1"}),
+        ("review", {"target_rule_id": "r1", "review_reason": "既存情報と矛盾"}),
+    ],
+)
+def test_records_the_version_of_the_rule_gemini_read(kind, extra):
+    # Gemini に渡したルールの版を記録する。
+    candidate = run(make_generator([draft(kind, **extra)])).posts[0].candidates[0]
+
+    assert candidate.target_rule_version == rule_version(RULE)
+
+
+def test_recorded_version_is_the_one_read_not_a_later_one():
+    # 生成の完了後にルールが変わっても、記録は Gemini が参照した時点の版のまま。
+    candidate = (
+        run(make_generator([draft("update", target_rule_id="r1")]))
+        .posts[0]
+        .candidates[0]
+    )
+    edited = Rule.model_validate(
+        {**RULE.model_dump(), "statement": {"ja": "別の文。", "en": "Another."}}
+    )
+
+    assert candidate.target_rule_version == rule_version(RULE)
+    assert candidate.target_rule_version != rule_version(edited)
+
+
+def test_add_candidate_has_no_target_rule_version():
+    candidate = run(make_generator([draft("add")])).posts[0].candidates[0]
+
+    assert candidate.target_rule_version is None
+
+
+def test_stale_candidate_records_the_version_it_judged():
+    rule = RULE.model_copy(
+        update={"updated_at": datetime(2020, 1, 1, tzinfo=timezone.utc)}
+    )
+
+    result = run(make_generator([]), posts=[], rules=[rule]).stale_candidates[0]
+
+    assert result.target_rule_version == rule_version(rule)
+
+
+def test_gemini_cannot_choose_target_rule_version():
+    # 版は Gemini の応答ではなく、渡したルールから計算する。
+    with pytest.raises(CandidateGenerationError, match="Invalid Gemini JSON"):
+        run(
+            make_generator(
+                [draft("update", target_rule_id="r1", target_rule_version="x")]
+            )
+        )
