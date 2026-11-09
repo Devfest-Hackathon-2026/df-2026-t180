@@ -1,5 +1,5 @@
 import { useLocation, useSearchParams } from "react-router";
-import { AppNav } from "@/components/AppNav";
+import { BottomBar } from "@/components/BottomBar";
 import { BrandMark } from "@/components/BrandMark";
 import { LanguageSwitch } from "@/components/LanguageSwitch";
 import { Mascot } from "@/components/Mascot";
@@ -8,7 +8,7 @@ import { t } from "@/content/copy";
 import { href, readLang } from "@/content/url";
 import styles from "./PendingPage.module.css";
 
-/** Holding page for screens built in later slices, such as /contribute. */
+/** Holding page for routes that do not exist yet. */
 export function PendingPage() {
   const [searchParams] = useSearchParams();
   const lang = readLang(Object.fromEntries(searchParams));
@@ -31,11 +31,7 @@ export function PendingPage() {
           {t("backToMap", lang)}
         </PillLink>
       </div>
-      {onResidents && (
-        <div className={styles.nav}>
-          <AppNav lang={lang} current="residents" />
-        </div>
-      )}
+      {onResidents && <BottomBar lang={lang} current="residents" />}
     </main>
   );
 }

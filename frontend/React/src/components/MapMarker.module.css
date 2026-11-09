@@ -1,13 +1,18 @@
 /* The link is anchored on the centre of the round dot, so selection never moves the dot. */
 .marker {
   --cat: var(--cat-manners);
-  position: absolute;
+  position: relative;
   display: flex;
   align-items: center;
   min-width: var(--target-min);
   height: var(--target-min);
-  translate: -22px -22px;
   transition: opacity var(--duration-base) ease;
+}
+
+/* On the placeholder map the marker places itself; on Google Maps the marker element does. */
+.marker[data-placed] {
+  position: absolute;
+  translate: -22px -22px;
 }
 
 .marker[data-category="transport"] {
