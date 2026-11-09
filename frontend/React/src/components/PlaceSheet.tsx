@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { categories, t } from "@/content/copy";
-import type { GuideTab, Lang, LatLng, PinnedRule, Region } from "@/content/types";
+import type { GuideTab, Lang, LatLng, LocatedRule, Region } from "@/content/types";
 import type { Params } from "@/content/url";
 import { useRegionRules } from "@/hooks/useRegionRules";
 import { CategoryIcon } from "./CategoryIcon";
@@ -23,7 +23,7 @@ export type SheetMode = "half" | "full";
 type Props = {
   mode: SheetMode;
   region: Region;
-  rule?: PinnedRule;
+  rule?: LocatedRule;
   tab: GuideTab;
   lang: Lang;
   linkTo: (patch: Params) => string;
@@ -167,9 +167,11 @@ export function PlaceSheet(props: Props) {
 
   // Title is the place (or the area when the guide opens from search); the line under it is
   // 「堺市 ・ 大阪府」 / "Sakai · Osaka", or just the prefecture under an area title.
-  const title = rule ? rule.place[lang] : region.name[lang];
+  // A pin without a place name (rules from the API, #22) is titled with the area instead.
+  const place = rule?.place?.[lang];
+  const title = place ?? region.name[lang];
   const sep = lang === "ja" ? " ・ " : " · ";
-  const subtitle = rule ? `${region.name[lang]}${sep}${region.parent[lang]}` : region.parent[lang];
+  const subtitle = place ? `${region.name[lang]}${sep}${region.parent[lang]}` : region.parent[lang];
 
   return (
     <section
@@ -196,7 +198,7 @@ export function PlaceSheet(props: Props) {
           <span aria-hidden="true" />
         </button>
         <div className={styles.head}>
-          {rule ? (
+          {rule?.category ? (
             <Tag tone={rule.category} icon={<CategoryIcon category={rule.category} size={14} />}>
               {categories[rule.category].label[lang]}
             </Tag>

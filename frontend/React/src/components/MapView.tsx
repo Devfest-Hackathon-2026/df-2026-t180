@@ -18,7 +18,7 @@ import styles from "./MapView.module.css";
 export type MapPin = {
   id: string;
   name: string;
-  category: Category;
+  category?: Category;
   location: LatLng;
   to: string;
 };
@@ -91,7 +91,9 @@ function GoogleMap(props: Props) {
               position={pin.location}
               anchorPoint={["22px", "22px"]}
               zIndex={pin.id === selectedId ? 10 : 1}
-              title={`${pin.name}, ${categories[pin.category].label[lang]}`}
+              title={
+                pin.category ? `${pin.name}, ${categories[pin.category].label[lang]}` : pin.name
+              }
               onClick={() => navigate(pin.to, { preventScrollReset: true })}
             >
               <MapMarker

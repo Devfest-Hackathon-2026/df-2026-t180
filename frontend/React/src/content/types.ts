@@ -27,6 +27,12 @@ export type Rule = {
 
 export type PinnedRule = Rule & { location: LatLng; place: Localised; category: Category };
 
+/**
+ * A rule that gets a pin. Rules from the API have a location (#15) but no place name or category
+ * yet (#22), so those two are optional here; the sample rules have both.
+ */
+export type LocatedRule = Rule & { location: LatLng };
+
 export type Region = {
   id: string;
   name: Localised;

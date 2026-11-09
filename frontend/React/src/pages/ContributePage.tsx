@@ -57,7 +57,7 @@ export function ContributePage() {
       setSending(true);
       setSendFailed(false);
       try {
-        await sendPost({ region, text, reason });
+        await sendPost({ region, text, reason, location });
       } catch {
         setSendFailed(true);
         setSending(false);

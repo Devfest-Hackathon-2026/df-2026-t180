@@ -14,24 +14,22 @@ import { Tag } from "@/components/Tag";
 import { appName, categoryOrder, t } from "@/content/copy";
 import { adminLive as apiLive } from "@/api/adminAuth";
 import { findRegion, pinnedRules, regions, rules } from "@/content/rules";
-import type { Category, GuideTab, LatLng, Region } from "@/content/types";
+import type { Category, GuideTab, LatLng, LocatedRule, Region } from "@/content/types";
 import { href, readLang, type Params } from "@/content/url";
 import { distanceKm, isDemoLocation, useMyLocation } from "@/hooks/useMyLocation";
+import { useRegionRules } from "@/hooks/useRegionRules";
 import styles from "./HomePage.module.css";
 
-/**
- * Pins come from the sample rules only. Real rules (from the API when connected) have no location
- * or place yet (#15, #22), so with a live connection the map shows no sample pins rather than
- * mixing sample places with real rules; the guide opens from search instead.
- */
-const mapRules = apiLive ? [] : pinnedRules;
+const hasLocation = (rule: { location?: LatLng }): rule is LocatedRule => Boolean(rule.location);
 
-function searchRegions(query: string): Region[] {
+/** Region names, plus the place names of its pins, match the search. */
+function searchRegions(query: string, pinned: LocatedRule[]): Region[] {
   const needle = query.trim().toLowerCase();
   return regions.filter((region) => {
     const names = [region.name.ja, region.name.en];
-    const pins = mapRules.filter((rule) => rule.region === region.id);
-    pins.forEach((rule) => names.push(rule.place.ja, rule.place.en));
+    pinned
+      .filter((rule) => rule.region === region.id && rule.place)
+      .forEach((rule) => names.push(rule.place!.ja, rule.place!.en));
     return names.some((name) => name.toLowerCase().includes(needle));
   });
 }
@@ -49,7 +47,13 @@ export function HomePage() {
   const lang = readLang(params);
   const { state, q } = params;
 
-  const results = q ? searchRegions(q) : [];
+  // Pins: with a live connection, the published rules of the shown area that have a location
+  // (#15); otherwise the sample rules. Rules without a location still appear in the guide.
+  const mapRegion = findRegion(params.region) ?? regions[0];
+  const live = useRegionRules(mapRegion.id);
+  const mapRules: LocatedRule[] = apiLive ? live.rules.filter(hasLocation) : pinnedRules;
+
+  const results = q ? searchRegions(q, mapRules) : [];
   const selected = mapRules.find((rule) => rule.id === params.spot);
   const isLoading = state === "loading";
   const isError = state === "error";
@@ -96,7 +100,8 @@ export function HomePage() {
   );
   const pins: MapPin[] = mapRules.map((rule) => ({
     id: rule.id,
-    name: rule.place[lang],
+    // Without a place name yet (#22), the pin is labelled with its rule.
+    name: rule.place?.[lang] ?? rule.statement[lang],
     category: rule.category,
     location: rule.location,
     to: here({ ...noSheet, spot: rule.id }),

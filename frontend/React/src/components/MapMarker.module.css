@@ -15,6 +15,11 @@
   translate: -22px -22px;
 }
 
+/* No category yet (rules from the API): neutral Google blue rather than a category colour. */
+.marker:not([data-category]) {
+  --cat: var(--g-blue);
+}
+
 .marker[data-category="transport"] {
   --cat: var(--cat-transport);
 }
@@ -54,6 +59,8 @@
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+  /* A rule without a place name is labelled with its sentence: end long ones with "…". */
+  text-overflow: ellipsis;
   opacity: 0;
   transition:
     max-width var(--duration-slow) var(--ease-out),

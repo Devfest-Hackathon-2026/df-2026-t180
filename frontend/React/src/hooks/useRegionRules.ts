@@ -6,7 +6,8 @@ import type { Rule } from "@/content/types";
 /**
  * A region's published rules for the guide. When the app is connected to the project (Firebase
  * settings in .env), they come from GET /api/regions/{id}/rules (機能C); otherwise the sample
- * rules are used. Rules from the API have no category, place or location yet (#22, #15).
+ * rules are used. Rules from the API carry an optional location (#15; only those get a pin) but no
+ * category or place name yet (#22).
  */
 const base = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/$/, "");
 
@@ -15,6 +16,7 @@ type ApiRule = {
   region: string;
   statement: Rule["statement"];
   updated_at: string;
+  location?: Rule["location"] | null;
 };
 
 export type RulesStatus = "loading" | "ready" | "failed";
@@ -34,6 +36,7 @@ async function fetchRules(regionId: string): Promise<Rule[]> {
     updatedAt: new Date(new Date(rule.updated_at).getTime() + 9 * 3600 * 1000)
       .toISOString()
       .slice(0, 10),
+    ...(rule.location ? { location: { lat: rule.location.lat, lng: rule.location.lng } } : {}),
   }));
 }
 
