@@ -12,7 +12,8 @@ type Props = {
   candidate: Candidate;
   lang: Lang;
   onDecide: (id: string, decision: Decision, statement?: Localised) => void;
-  onUndo: (id: string) => void;
+  /** Leave out once the decision has been sent and can no longer be undone. */
+  onUndo?: (id: string) => void;
 };
 
 const typeLabel = { add: "typeAdd", update: "typeUpdate", review: "typeReview" } as const;
@@ -41,9 +42,11 @@ export function CandidateCard({ candidate: c, lang, onDecide, onUndo }: Props) {
           <strong>{ta(done, lang)}</strong>
           <span className={styles.doneStatement}>{c.statement[lang]}</span>
         </span>
-        <button type="button" className={styles.undo} onClick={() => onUndo(c.id)}>
-          {ta("undo", lang)}
-        </button>
+        {onUndo && (
+          <button type="button" className={styles.undo} onClick={() => onUndo(c.id)}>
+            {ta("undo", lang)}
+          </button>
+        )}
       </li>
     );
   }

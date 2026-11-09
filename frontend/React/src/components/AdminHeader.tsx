@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { signOut } from "@/api/adminAuth";
 import { ta } from "@/content/admin";
 import type { Lang } from "@/content/types";
 import { href } from "@/content/url";
@@ -43,6 +44,7 @@ export function AdminHeader({ lang, current }: Props) {
           <Link
             className={styles.signOut}
             to={href("/admin", langParam)}
+            onClick={() => void signOut()}
             aria-label={ta("signOut", lang)}
             title={ta("signOut", lang)}
           >

@@ -163,6 +163,24 @@ const strings = {
   noneLeft: { ja: "確認待ちの候補はありません", en: "Nothing waiting for review" },
   editRule: { ja: "編集", en: "Edit" },
   savedRule: { ja: "保存しました", en: "Saved" },
+  notAdmin: {
+    ja: "このアカウントは管理者として登録されていません",
+    en: "This account isn't registered as an admin",
+  },
+  loading: { ja: "読み込み中…", en: "Loading…" },
+  loadFailed: {
+    ja: "読み込めませんでした。サーバーが起動しているか確認してください",
+    en: "Couldn't load. Check that the server is running",
+  },
+  saveFailed: {
+    ja: "保存できませんでした。もう一度お試しください",
+    en: "Couldn't save. Please try again",
+  },
+  retry: { ja: "再読み込み", en: "Reload" },
+  sampleData: {
+    ja: "サンプルデータで表示中です（保存されません）",
+    en: "Showing sample data (nothing is saved)",
+  },
   japanese: { ja: "日本語", en: "Japanese" },
   english: { ja: "英語", en: "English" },
   updatedAt: { ja: "更新", en: "Updated" },

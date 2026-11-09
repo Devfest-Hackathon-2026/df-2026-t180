@@ -3,14 +3,16 @@ import { useNavigate, useSearchParams } from "react-router";
 import { AdminHeader } from "@/components/AdminHeader";
 import { Icon } from "@/components/Icon";
 import { ManagerMascot, type ManagerState } from "@/components/ManagerMascot";
+import { adminLive, signIn } from "@/api/adminAuth";
 import { ta } from "@/content/admin";
 import { href, readLang } from "@/content/url";
 import styles from "./AdminLoginPage.module.css";
 
 /**
  * Admin sign-in (機能D). Email and password only; accounts are added in the Firebase console, so
- * there is no sign-up. Mocked for now: any non-empty email and password continue to the queue.
- * ?state=error previews the wrong-password message.
+ * there is no sign-up. With Firebase configured it signs in for real; otherwise (sample mode) any
+ * non-empty email and password continue to the queue. ?state=error previews the wrong-password
+ * message; ?state=forbidden is where the queue sends accounts that aren't admins.
  */
 export function AdminLoginPage() {
   const [searchParams] = useSearchParams();
@@ -24,7 +26,10 @@ export function AdminLoginPage() {
   const [signedIn, setSignedIn] = useState(false);
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
   const mascotRef = useRef<HTMLDivElement>(null);
-  const failed = params.state === "error";
+  const [rejected, setRejected] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const failed = params.state === "error" || rejected;
+  const forbidden = params.state === "forbidden";
   const missing = tried && (!email.trim() || !password);
 
   // The manager's eyes follow the pointer while nothing is focused.
@@ -46,7 +51,7 @@ export function AdminLoginPage() {
     ? "happy"
     : focus === "password"
       ? "password"
-      : missing || (failed && !email && !password)
+      : missing || (failed && !email && !password) || (rejected && !busy) || forbidden
         ? "error"
         : focus === "email"
           ? "email"
@@ -54,10 +59,22 @@ export function AdminLoginPage() {
   // Typing an email: look down at the field and read along as it grows.
   const look = state === "email" ? { x: -0.8 + Math.min(email.length, 28) / 17.5, y: 1 } : pointer;
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setTried(true);
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password || busy) return;
+    if (adminLive) {
+      setBusy(true);
+      setRejected(false);
+      try {
+        await signIn(email.trim(), password);
+      } catch {
+        setRejected(true);
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
+    }
     setFocus(undefined);
     setSignedIn(true);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -85,6 +102,11 @@ export function AdminLoginPage() {
             {failed && (
               <p className={styles.error} role="alert">
                 {ta("signInFailed", lang)}
+              </p>
+            )}
+            {forbidden && !failed && (
+              <p className={styles.error} role="alert">
+                {ta("notAdmin", lang)}
               </p>
             )}
 
@@ -124,7 +146,7 @@ export function AdminLoginPage() {
               </p>
             )}
 
-            <button type="submit" className={styles.submit}>
+            <button type="submit" className={styles.submit} aria-busy={busy || undefined}>
               <span>{ta("signIn", lang)}</span>
               <span className={styles.circle} aria-hidden="true">
                 <Icon name="arrowUpRight" size={18} strokeWidth={2.4} />
