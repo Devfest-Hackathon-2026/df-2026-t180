@@ -8,19 +8,22 @@
 
 | 対象 | 定義 |
 | --- | --- |
-| 必要API | Artifact Registry / Cloud Run / IAM / Firestore。destroy時も無効化しない |
+| 必要API | Artifact Registry / Cloud Run / IAM / Firestore / Firebase Rules。destroy時も無効化しない |
 | Artifact Registry | 東京、Docker形式、`hack26-backend`、削除防止 |
 | API実行SA | `hack26-api`、鍵ファイルなし、ADC |
-| Firestore IAM | カスタムロール `hack26PostWriter`、`datastore.entities.create` のみ |
+| Firestore IAM | `hack26PostWriter`：entities.create/get/list/update、databases.get |
+| Security Rules | `firestore.rules` → Ruleset → `cloud.firestore` Release |
 | Cloud Run Service | `hack26-api`、0〜2インスタンス、1 CPU / 512 MiB、認証必須 |
 | Cloud Run Job / Scheduler | **未定義・未作成**。後述の設計のみ |
 
 既存Firestore `(default)` / `FIRESTORE_NATIVE` / 東京、およびFirebaseプロジェクト、
-Webアプリ、Hosting、Authentication、Security Rules、データは管理・再作成しない。
+Webアプリ、Hosting、Authentication、データは管理・再作成しない。
+Security Rulesのみ別リソースとして管理する。Firestore DB作成リソースは定義しない。
 FirestoreへのIAM付与は既存ポリシーを上書きしないmember方式。
 DB条件で `(default)` のみに限定するが、IAMでは `posts` コレクションだけに限定できない。
-API用SAには読み取り・更新・削除・Vertex AI権限を付けない。
-現行の投稿追加に合わせた権限なので、機能C/D追加時に別途見直す。
+API用SAには機能Aの投稿作成と、機能Cのregions・rules取得用の読み取り権限を付ける。
+機能D向けの更新・トランザクション権限も維持する。削除・Vertex AI権限は付けない。
+IAM条件はDB単位なので、作成・読み取りの対象をコレクション単位には制限しない。
 根拠: [Firestore IAM](https://firebase.google.com/docs/firestore/security/iam)、
 [DB単位のIAM条件](https://firebase.google.com/docs/firestore/manage-databases#configure_per-database_access_permissions)。
 
@@ -121,6 +124,13 @@ Serviceのdeletion protectionとリポジトリのprevent_destroyを解除する
 ## デプロイ後の確認とフロント接続
 
 Serviceは公開invokerを付与せず、認証必須のまま作成する。
+`allow_public_api` は既定falseで、設定例もfalseを維持する。
+将来 `deploy_api=true` の状態で `allow_public_api=true` にすると、planに
+`google_cloud_run_v2_service_iam_member.api_public_invoker` の追加
+（`allUsers` / `roles/run.invoker`）が明示される。falseへ戻すとこの付与を削除する。
+この変数はServiceへのHTTP呼び出しだけを許可し、Firestoreへの権限は一般ユーザーに付けない。
+外部で追加された公開IAMはこの変数では除去しないため、適用前に既存設定も確認する。
+機能Dの認証・管理者認可の検証完了まではtrueへ変更しない。
 確認担当に対象Serviceの `roles/run.invoker` がある状態で、次のプロキシを利用できる。
 
 ```powershell
@@ -130,6 +140,19 @@ gcloud run services proxy hack26-api --project=hack26-project --region=asia-nort
 `http://localhost:8080/docs` でAPI定義を確認する。投稿APIの実疎通確認はFirestoreに
 データを書き込むため、承認後に行う。IAM反映には時間がかかる場合がある。
 今回のfmt/init/validateは、GCPの権限・クォータ・実際の書き込み成功を検証しない。
+
+Docker Engine起動後、ローカルコンテナのOpenAPIを別ターミナルで確認する。
+これはFirestoreへアクセスしない。
+
+```powershell
+$spec = Invoke-RestMethod http://localhost:8080/openapi.json
+if (-not $spec.paths.'/api/posts'.post) { throw 'POST /api/posts missing' }
+if (-not $spec.paths.'/api/regions'.get) { throw 'GET /api/regions missing' }
+if (-not $spec.paths.'/api/regions/{region_id}/rules'.get) { throw 'GET region rules missing' }
+```
+
+一般向けフロントの投稿・閲覧は最新mainでもモック／サンプルが残っているため、
+画面からの実利用にはフロント担当によるAPI接続が別途必要。
 
 ブラウザ向け公開方式は未実装。Firebase Hosting rewrite、またはAPI公開とCORS設定を
 フロント担当と調整する。Firebase IDトークンはCloud RunのIAM認証とは別であり、
@@ -174,3 +197,81 @@ Scheduler（初期paused=true）
 Schedulerの停止解除を別途承認する。
 
 根拠: [Cloud Run Jobのスケジュール実行](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule)。
+Cloud Runには `GOOGLE_CLOUD_PROJECT` と `FIREBASE_PROJECT_ID` を明示する。
+既定ではどちらも `hack26-project`。APIキー・認証鍵は不要。
+
+## Security Rulesの管理と次回適用
+
+2026-11-09時点の読み取り確認：
+
+- 既存stateはAPI4件・Artifact Registry・API実行SAの計6件。
+- Rules APIの `projects/hack26-project/releases/cloud.firestore` は404。
+- Release一覧、Ruleset一覧はいずれも空（継続ページなし）。現在のRulesソースは存在せず取得対象なし。
+- Hostingの既存サイトは `hack26-project`。公開Release一覧は空。
+- 新規planは5 add / 0 change / 0 destroy：カスタムロール、IAM member、Rules API管理、Ruleset、Release。
+
+`firestore_rules.tf` は独立した `firestore.rules` を `file()` で読み、全クライアントの
+Firestore読み書きを拒否する。Firebaseログイン済み管理者も直接アクセス不可。
+FastAPIのサーバーSDKはIAMで動作し、このルールによって禁止されない。
+独立したルール構文のサーバー側コンパイル・実拒否動作は今回未検証。
+
+既存Google provider 7.46.2のローカルスキーマでRuleset・Releaseを確認しvalidate済み。
+Rulesetは不変のため更新時は新規作成し、Releaseの参照先を切り替える。
+`create_before_destroy` と `deletion_policy=ABANDON` により旧RulesetをAPIから削除しない。
+Releaseは `prevent_destroy` と `deletion_policy=PREVENT` で削除を防ぐ。
+古いRulesetの整理は別途承認が必要。
+
+**既存 `bootstrap.tfplan` は変更前の計画なので今後使わない。**
+今回の `rules-review.tfplan` もレビュー用。適用直前に状態を再確認し、新しくplanを作る。
+Rulesの適用は実アクセス制御の変更となるため、内容とplanの承認が必要。
+
+安全な次回作業：
+
+1. 現在のstateを安全な場所へバックアップ。同じstateを使い続け、削除・作り直しをしない。
+2. Rules APIをGETし、ReleaseとRulesetの有無を再確認。403や取得失敗なら停止し、推測で上書きしない。
+3. Releaseが新たに存在していれば、その `rulesetName` のソースを取得・保全・レビューする。
+   下記importで既存Releaseを管理に取り込む。今回はimportしていない。
+4. 新規deny-all Rulesetへの切り替え差分と、既存6件に置換・削除がないことをplanで確認する。
+5. Rules公開を含む承認後に限り、その新規planを適用。権限不足なら停止し無断で権限を変更しない。
+6. クライアント拒否と、FastAPI経由のIAMアクセスを確認する。DB実書き込みの検証も事前合意する。
+
+```powershell
+# 既存Releaseを確認できた場合だけ実行（stateを書き換えるため今回は未実施）
+terraform -chdir=infra/terraform import google_firebaserules_release.firestore projects/hack26-project/releases/cloud.firestore
+# 既存Ruleset自体を管理する場合のみ。IDは取得した実際の値を指定する。
+# terraform -chdir=infra/terraform import google_firebaserules_ruleset.firestore projects/hack26-project/rulesets/RULESET_ID
+terraform -chdir=infra/terraform plan '-out=rules-reviewed.tfplan'
+```
+
+旧Rulesetをimportする場合、ソースとの差分による置換を必ずレビューする。
+Releaseだけimportして旧Rulesetを管理対象外で保存する方法も可能。
+
+操作主体の権限（Cloud Run実行SAには付与しない）：
+
+- 読み取り：`firebaserules.releases.get/list`、`firebaserules.rulesets.get/list`。
+- 公開：`firebaserules.rulesets.create`、`firebaserules.releases.create/update` と上記読み取り。
+- API有効化：`serviceusage.services.enable/get/list` 等。カスタムロール作成とプロジェクトIAM変更の権限も別途必要。
+- `roles/firebaserules.admin` は既定ロール候補だが広い。必要なら管理者がカスタムロールを検討する。
+  今回はどの操作権限も追加していない。plan成功はcreate/update権限の保有証明ではない。
+
+## Hosting rewrite案（未実装）
+
+Google providerには `google_firebase_hosting_version` のrewrites/runと
+`google_firebase_hosting_release` があり、既存site IDを参照して構成可能。
+ただしHostingはバージョン全体を公開する仕組みで、rewriteだけの独立更新ではない。
+静的ファイル・SPA rewrite・ヘッダー設定の欠落を防ぐため、フロント担当と公開の管理主体を統一する。
+今回はsite/Webアプリ/version/releaseを作成・変更せず、Firebase CLIによる既存サイトへの
+フロント配信と `firebase.json` の管理をMVP案とする。
+
+```json
+{
+  "source": "/api/**",
+  "run": { "serviceId": "hack26-api", "region": "asia-northeast1" }
+}
+```
+
+このrewriteをSPAの `**` より先に置く。同一オリジンの `/api/...` を利用してCORSに依存しない。
+Firebase IDトークンを `Authorization: Bearer ...` で送り、Cloud Run到達時のヘッダーと
+401/403/正常管理者アクセスを実環境で確認する。トークン自体をログ出力しない。
+Firebase Hosting rewriteだけではCloud Run IAM認証をFirebase認証で満たせない。
+一般公開はDのトークン・管理者検証完了後の別承認とし、今は `allow_public_api=false` を維持する。

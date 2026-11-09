@@ -5,6 +5,7 @@ locals {
     "run.googleapis.com",
     "iam.googleapis.com",
     "firestore.googleapis.com",
+    "firebaserules.googleapis.com",
   ])
 }
 
@@ -41,9 +42,15 @@ resource "google_service_account" "api" {
 resource "google_project_iam_custom_role" "post_writer" {
   project     = var.project_id
   role_id     = "hack26PostWriter"
-  title       = "Regional Rules post creator"
-  description = "Create Firestore documents; no read, update or delete permissions."
-  permissions = ["datastore.entities.create"]
+  title       = "Regional Rules API data access"
+  description = "Create, read and update API data with transactions; no delete permission."
+  permissions = [
+    "datastore.entities.create",
+    "datastore.entities.get",
+    "datastore.entities.list",
+    "datastore.entities.update",
+    "datastore.databases.get",
+  ]
 
   depends_on = [google_project_service.required]
 }
@@ -56,7 +63,7 @@ resource "google_project_iam_member" "api_firestore" {
   # IAM can scope to the existing database, but not to the posts collection.
   condition {
     title       = "default_database_only"
-    description = "Limit document creation to the existing default database."
+    description = "Limit document creation and reads to the existing default database."
     expression  = "resource.name == 'projects/${var.project_id}/databases/(default)'"
   }
 }
@@ -70,7 +77,7 @@ resource "google_cloud_run_v2_service" "api" {
   deletion_protection = true
   ingress             = "INGRESS_TRAFFIC_ALL"
 
-  # No allUsers invoker grant: browser/public access is a separate reviewed change.
+  # Public invocation is opt-in through api_public_invoker below.
   template {
     service_account = google_service_account.api.email
     timeout         = "60s"
@@ -92,6 +99,11 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.project_id
       }
 
+      env {
+        name  = "FIREBASE_PROJECT_ID"
+        value = var.project_id
+      }
+
       resources {
         limits = {
           cpu    = "1"
@@ -104,4 +116,15 @@ resource "google_cloud_run_v2_service" "api" {
   }
 
   depends_on = [google_project_iam_member.api_firestore, google_artifact_registry_repository.backend]
+}
+
+# This grant permits HTTP invocation only, not direct Firestore access.
+resource "google_cloud_run_v2_service_iam_member" "api_public_invoker" {
+  count = var.deploy_api && var.allow_public_api ? 1 : 0
+
+  project  = var.project_id
+  location = var.region
+  name     = google_cloud_run_v2_service.api[0].name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

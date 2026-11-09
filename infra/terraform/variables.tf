@@ -16,6 +16,12 @@ variable "deploy_api" {
   default     = false
 }
 
+variable "allow_public_api" {
+  description = "Allow unauthenticated HTTP invocation. Keep false until all deployed admin routes have verified authentication and authorization."
+  type        = bool
+  default     = false
+}
+
 variable "api_image" {
   description = "Immutable Artifact Registry image digest, required when deploy_api=true."
   type        = string
