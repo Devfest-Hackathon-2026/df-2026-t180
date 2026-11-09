@@ -20,7 +20,8 @@ export function AdminHeader({ lang, current }: Props) {
         <Tag tone="highlight">{ta("admin", lang)}</Tag>
       </div>
       {current && (
-        <nav className={styles.nav} aria-label={ta("adminNav", lang)}>
+        <nav className={styles.nav} aria-label={ta("adminNav", lang)} data-current={current}>
+          <span className={styles.thumb} aria-hidden="true" />
           {(["candidates", "rules"] as const).map((area) => (
             <Link
               key={area}
