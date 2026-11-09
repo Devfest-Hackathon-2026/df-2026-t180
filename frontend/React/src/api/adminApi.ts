@@ -46,6 +46,8 @@ export type AdminRule = {
   statement: Localised;
   updatedAt: string;
   lastReviewedAt?: string;
+  /** Sent back when editing, so the server can refuse if the rule changed meanwhile. */
+  version: string;
 };
 
 type ApiRule = {
@@ -54,6 +56,7 @@ type ApiRule = {
   statement: Localised;
   updated_at: string;
   last_reviewed_at?: string | null;
+  version: string;
 };
 
 type ApiCandidate = {
@@ -66,8 +69,15 @@ type ApiCandidate = {
   type: Candidate["type"];
   target_rule_id?: string | null;
   review_reason?: string | null;
+  decided_statement?: Localised | null;
+  rule_changed_since_generated?: boolean;
   post?: { text: string; reason?: string | null; created_at: string } | null;
-  current?: { statement: Localised; updated_at: string; last_reviewed_at?: string | null } | null;
+  current?: {
+    statement: Localised;
+    updated_at: string;
+    last_reviewed_at?: string | null;
+    version: string;
+  } | null;
 };
 
 const toRule = (rule: ApiRule): AdminRule => ({
@@ -76,6 +86,7 @@ const toRule = (rule: ApiRule): AdminRule => ({
   statement: rule.statement,
   updatedAt: rule.updated_at,
   lastReviewedAt: rule.last_reviewed_at ?? undefined,
+  version: rule.version,
 });
 
 const toCandidate = (c: ApiCandidate): Candidate => ({
@@ -88,6 +99,8 @@ const toCandidate = (c: ApiCandidate): Candidate => ({
   statement: c.statement,
   targetRuleId: c.target_rule_id ?? undefined,
   reviewReason: c.review_reason ?? undefined,
+  decidedStatement: c.decided_statement ?? undefined,
+  ruleChangedSinceGenerated: c.rule_changed_since_generated ?? false,
   post: c.post
     ? { text: c.post.text, reason: c.post.reason ?? undefined, createdAt: c.post.created_at }
     : undefined,
@@ -96,6 +109,7 @@ const toCandidate = (c: ApiCandidate): Candidate => ({
         statement: c.current.statement,
         updatedAt: c.current.updated_at,
         lastReviewedAt: c.current.last_reviewed_at ?? undefined,
+        version: c.current.version,
       }
     : undefined,
 });
@@ -105,28 +119,50 @@ export async function listCandidates(): Promise<Candidate[]> {
   return (await request<ApiCandidate[]>("/api/admin/candidates")).map(toCandidate);
 }
 
-/** Approve (optionally with edited text) or reject. Returns the decided candidate. */
+/**
+ * Approve (optionally with edited text) or reject. Returns the decided candidate and, when a
+ * rule was created or changed, that rule.
+ *
+ * Approving an update or review sends the version of the rule the admin was looking at
+ * (candidate.current.version). If the rule changed since, the server answers 409 and saves nothing.
+ */
 export async function decideCandidate(
-  id: string,
+  candidate: Pick<Candidate, "id" | "current">,
   action: "approve" | "reject",
   statement?: Localised,
-): Promise<Candidate> {
-  const result = await request<{ candidate: ApiCandidate }>(
-    `/api/admin/candidates/${encodeURIComponent(id)}`,
-    { method: "PATCH", body: JSON.stringify({ action, ...(statement ? { statement } : {}) }) },
+): Promise<{ candidate: Candidate; rule?: AdminRule }> {
+  const expectedVersion = action === "approve" ? candidate.current?.version : undefined;
+  const result = await request<{ candidate: ApiCandidate; rule?: ApiRule | null }>(
+    `/api/admin/candidates/${encodeURIComponent(candidate.id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        action,
+        ...(statement ? { statement } : {}),
+        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
+      }),
+    },
   );
-  return toCandidate(result.candidate);
+  return {
+    candidate: toCandidate(result.candidate),
+    rule: result.rule ? toRule(result.rule) : undefined,
+  };
 }
 
 export async function listRules(): Promise<AdminRule[]> {
   return (await request<ApiRule[]>("/api/admin/rules")).map(toRule);
 }
 
-export async function editRule(id: string, statement: Localised): Promise<AdminRule> {
+/** Edit a rule's text. 409 if it changed since expectedVersion was loaded; nothing is saved. */
+export async function editRule(
+  id: string,
+  statement: Localised,
+  expectedVersion: string,
+): Promise<AdminRule> {
   return toRule(
     await request<ApiRule>(`/api/admin/rules/${encodeURIComponent(id)}`, {
       method: "PATCH",
-      body: JSON.stringify({ statement }),
+      body: JSON.stringify({ statement, expected_version: expectedVersion }),
     }),
   );
 }
