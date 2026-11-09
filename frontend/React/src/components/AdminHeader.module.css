@@ -5,7 +5,8 @@
     "brand end"
     "nav nav";
   align-items: center;
-  gap: var(--space-3);
+  /* More room between the logo row and the switch on phones, so the top doesn't feel packed. */
+  gap: var(--space-6) var(--space-3);
   padding: max(var(--space-3), env(safe-area-inset-top)) 0 0;
 }
 
