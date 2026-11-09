@@ -18,12 +18,18 @@ class CandidateDecision(BaseModel):
     """PATCH /api/admin/candidates/{id} の本文。
 
     approve に statement を付けると「修正して採用」になる。reject には付けられない。
+
+    update・review の approve では、管理画面で表示していた対象ルールの version
+    （一覧の current.version）を expected_version に入れる。その後ルールが
+    変わっていれば 409。
+    add と reject では使わない。
     """
 
     model_config = ConfigDict(extra="forbid")
 
     action: Literal["approve", "reject"]
     statement: LocalizedStatement | None = None
+    expected_version: NonEmptyString | None = None
 
     @model_validator(mode="after")
     def validate_statement(self) -> "CandidateDecision":
@@ -38,6 +44,8 @@ class RuleEdit(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     statement: LocalizedStatement
+    # 編集画面で表示していたルールの version。その後ルールが変わっていれば 409。
+    expected_version: NonEmptyString
 
 
 class CandidatePost(BaseModel):
@@ -54,6 +62,13 @@ class CandidateTarget(BaseModel):
     statement: LocalizedStatement
     updated_at: UtcDatetime
     last_reviewed_at: UtcDatetime | None = None
+    version: NonEmptyString
+
+
+class AdminRule(Rule):
+    """管理画面向けの公開ルール。編集時に送り返す version を添える。"""
+
+    version: NonEmptyString
 
 
 class AdminCandidate(Candidate):
@@ -67,4 +82,4 @@ class CandidateDecisionResult(BaseModel):
     """採否の結果。採用で公開ルールが作成・更新された場合は rule に入る。"""
 
     candidate: Candidate
-    rule: Rule | None = None
+    rule: AdminRule | None = None

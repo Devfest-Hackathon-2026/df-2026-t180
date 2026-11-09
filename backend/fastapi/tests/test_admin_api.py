@@ -5,12 +5,13 @@ from fastapi.testclient import TestClient
 
 from api import admin as admin_api
 from main import app
-from repositories.admin import get_admin_repository
+from repositories.admin import TransactionContention, get_admin_repository
 from schemas.candidate import Candidate
 from schemas.post import StoredPost
 from schemas.rule import Rule
 from services import firebase_auth
-from services.firebase_auth import InvalidToken
+from services.admin_decisions import rule_version
+from services.firebase_auth import AuthUnavailable, InvalidToken
 
 NOW = datetime(2026, 11, 9, 6, 0, tzinfo=timezone.utc)
 OLD = datetime(2023, 11, 3, tzinfo=timezone.utc)
@@ -37,6 +38,8 @@ def make_candidate(candidate_id: str, **fields) -> Candidate:
 
 
 class FakeTransaction:
+    """書き込みはため込み、run_transaction が最後まで成功したときだけ反映する。"""
+
     def __init__(self, repository: "FakeAdminRepository") -> None:
         self._repository = repository
         self.candidates: dict[str, Candidate] = {}
@@ -49,13 +52,18 @@ class FakeTransaction:
         return self._repository.rules.get(rule_id)
 
     def new_rule_id(self):
-        return "rule_new"
+        # Firestore の自動IDと同じく、毎回別のIDを払い出す。
+        self._repository.issued_ids += 1
+        return f"rule_new_{self._repository.issued_ids}"
 
-    def set_candidate(self, candidate):
-        self.candidates[candidate.id] = candidate
+    def update_candidate(self, before, after):
+        assert self._repository.candidates[before.id] == before
+        self.candidates[after.id] = after
 
-    def set_rule(self, rule):
-        self.rules[rule.id] = rule
+    def save_rule(self, before, after):
+        if before is None:
+            assert after.id not in self._repository.rules, "create must not overwrite"
+        self.rules[after.id] = after
 
 
 class FakeAdminRepository:
@@ -99,6 +107,7 @@ class FakeAdminRepository:
             ]
         }
         self.commits = 0
+        self.issued_ids = 0
 
     def is_admin(self, uid):
         return uid in self.admins
@@ -134,6 +143,10 @@ class FakeAdminRepository:
         return result
 
 
+def version_of(repository, rule_id="rule_1") -> str:
+    return rule_version(repository.rules[rule_id])
+
+
 def verify(token: str) -> str:
     if token == ADMIN_TOKEN:
         return "admin_uid"
@@ -164,7 +177,11 @@ ENDPOINTS = [
     ("get", "/api/admin/candidates", None),
     ("get", "/api/admin/rules", None),
     ("patch", "/api/admin/candidates/post_1_1", {"action": "approve"}),
-    ("patch", "/api/admin/rules/rule_1", {"statement": EDITED}),
+    (
+        "patch",
+        "/api/admin/rules/rule_1",
+        {"statement": EDITED, "expected_version": "v"},
+    ),
 ]
 
 
@@ -203,18 +220,58 @@ def test_rejects_signed_in_non_admin(client, repository, method, path, body):
     assert repository.commits == 0
 
 
-def test_returns_503_when_sign_in_is_not_configured(client, monkeypatch):
+@pytest.fixture
+def not_configured(monkeypatch):
+    """検証器の差し替えを外し、プロジェクトIDのない本物の設定を使う。"""
     monkeypatch.setattr(firebase_auth, "load_dotenv", lambda: None)
-    # 検証器の差し替えを外し、プロジェクトIDのない本物の設定を使う。
     app.dependency_overrides.pop(admin_api._verifier)
     monkeypatch.delenv("FIREBASE_PROJECT_ID", raising=False)
     monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
     firebase_auth.get_token_verifier.cache_clear()
+    yield
+    firebase_auth.get_token_verifier.cache_clear()
 
+
+def test_returns_503_when_sign_in_is_not_configured(client, not_configured):
     response = client.get("/api/admin/candidates", headers=AUTH)
 
     assert response.status_code == 503
-    firebase_auth.get_token_verifier.cache_clear()
+
+
+@pytest.mark.parametrize(
+    "headers", [{}, {"Authorization": f"Basic {ADMIN_TOKEN}"}], ids=["none", "basic"]
+)
+def test_missing_token_is_401_even_when_not_configured(client, not_configured, headers):
+    response = client.get("/api/admin/candidates", headers=headers)
+
+    assert response.status_code == 401
+
+
+def test_returns_503_when_public_keys_are_unavailable(client, repository):
+    def unavailable(token):
+        raise AuthUnavailable("could not fetch keys")
+
+    app.dependency_overrides[admin_api._verifier] = lambda: unavailable
+    response = client.get("/api/admin/candidates", headers=AUTH)
+
+    assert response.status_code == 503
+    # 内部の例外の内容は返さない。
+    assert "could not fetch keys" not in response.text
+
+
+def test_removing_an_admin_takes_effect_on_the_next_request(client, repository):
+    assert client.get("/api/admin/rules", headers=AUTH).status_code == 200
+
+    repository.admins.discard("admin_uid")
+
+    assert client.get("/api/admin/rules", headers=AUTH).status_code == 403
+    response = client.patch(
+        "/api/admin/rules/rule_1",
+        json={"statement": EDITED, "expected_version": version_of(repository)},
+        headers=AUTH,
+    )
+    assert response.status_code == 403
+    assert repository.rules["rule_1"].updated_at == OLD
 
 
 # --- 候補一覧 -----------------------------------------------------------------
@@ -231,6 +288,26 @@ def test_lists_pending_candidates_with_post_and_current_rule(client):
     assert body["post_1_2"]["current"]["statement"] == statement("既存のルール")
     assert body["stale_rule_1"]["post"] is None
     assert body["stale_rule_1"]["current"]["updated_at"].startswith("2023-11-03")
+    # 採用時に送り返す version。公開ルール一覧の version と同じ値。
+    rules = client.get("/api/admin/rules", headers=AUTH).json()
+    assert body["post_1_2"]["current"]["version"] == rules[0]["version"]
+
+
+def test_no_candidates_is_an_empty_list_and_rules_still_work(client, repository):
+    repository.candidates.clear()
+
+    response = client.get("/api/admin/candidates?status=all", headers=AUTH)
+    assert response.status_code == 200
+    assert response.json() == []
+
+    rules = client.get("/api/admin/rules", headers=AUTH)
+    assert [r["id"] for r in rules.json()] == ["rule_1"]
+    edited = client.patch(
+        "/api/admin/rules/rule_1",
+        json={"statement": EDITED, "expected_version": rules.json()[0]["version"]},
+        headers=AUTH,
+    )
+    assert edited.status_code == 200
 
 
 @pytest.mark.parametrize(
@@ -265,6 +342,34 @@ def decide(client, candidate_id, body):
     )
 
 
+def approve(repository, edited=None, version=None):
+    return {
+        "action": "approve",
+        **({"statement": edited} if edited else {}),
+        "expected_version": version or version_of(repository),
+    }
+
+
+@pytest.fixture
+def post_review(repository):
+    """投稿との矛盾から生成された review 候補。"""
+    candidate = make_candidate(
+        "post_1_4",
+        type="review",
+        target_rule_id="rule_1",
+        review_reason="投稿の内容が公開ルールと矛盾しています",
+        statement=statement("投稿にもとづく提案"),
+    )
+    repository.candidates[candidate.id] = candidate
+    return candidate.id
+
+
+@pytest.fixture(params=["stale", "post"])
+def review_id(request, post_review):
+    """経年確認(stale_rule)と投稿由来の review。どちらも同じ 3 つの操作を使う。"""
+    return "stale_rule_1" if request.param == "stale" else post_review
+
+
 @pytest.mark.parametrize("edited", [None, EDITED])
 def test_approving_add_creates_rule(client, repository, edited):
     body = {"action": "approve", **({"statement": edited} if edited else {})}
@@ -272,46 +377,84 @@ def test_approving_add_creates_rule(client, repository, edited):
 
     assert response.status_code == 200
     published = edited or statement("候補")
-    rule = repository.rules["rule_new"]
+    rule_id = response.json()["rule"]["id"]
+    rule = repository.rules[rule_id]
     assert rule.statement.model_dump() == published
     assert (rule.region, rule.updated_at, rule.last_reviewed_at) == ("sakai", NOW, None)
     candidate = repository.candidates["post_1_1"]
     assert candidate.status == "approved"
     assert candidate.statement.model_dump() == published
-    assert response.json()["rule"]["id"] == "rule_new"
+    assert response.json()["rule"]["version"] == rule_version(rule)
+
+
+def test_approving_several_adds_creates_separate_rules(client, repository):
+    for i in range(2, 5):
+        repository.candidates[f"post_2_{i}"] = make_candidate(
+            f"post_2_{i}", statement=statement(f"候補{i}")
+        )
+
+    ids = [
+        decide(client, f"post_2_{i}", {"action": "approve"}).json()["rule"]["id"]
+        for i in range(2, 5)
+    ]
+
+    assert len(set(ids)) == 3
+    assert {repository.rules[i].statement.ja for i in ids} == {
+        "候補2。",
+        "候補3。",
+        "候補4。",
+    }
+    assert repository.rules["rule_1"].statement.model_dump() == statement(
+        "既存のルール"
+    )
 
 
 @pytest.mark.parametrize("edited", [None, EDITED])
 def test_approving_update_replaces_rule_text(client, repository, edited):
-    body = {"action": "approve", **({"statement": edited} if edited else {})}
-    response = decide(client, "post_1_2", body)
+    response = decide(client, "post_1_2", approve(repository, edited))
 
     assert response.status_code == 200
     rule = repository.rules["rule_1"]
     assert rule.statement.model_dump() == (edited or statement("候補"))
     assert (rule.updated_at, rule.last_reviewed_at) == (NOW, None)
     assert repository.candidates["post_1_2"].status == "approved"
+    assert response.json()["rule"]["version"] == version_of(repository)
 
 
-def test_review_still_correct_only_moves_last_reviewed_at(client, repository):
-    response = decide(client, "stale_rule_1", {"action": "approve"})
+def test_review_still_correct_only_moves_last_reviewed_at(
+    client, repository, review_id
+):
+    response = decide(client, review_id, approve(repository))
 
     assert response.status_code == 200
     rule = repository.rules["rule_1"]
     assert rule.statement.model_dump() == statement("既存のルール")
     assert (rule.updated_at, rule.last_reviewed_at) == (OLD, NOW)
-    assert repository.candidates["stale_rule_1"].status == "approved"
+    candidate = repository.candidates[review_id]
+    assert candidate.status == "approved"
+    # 候補には、提案文ではなく確認した公開ルールの文が残る。
+    assert candidate.statement == rule.statement
 
 
-def test_review_edit_and_approve_replaces_text(client, repository):
-    response = decide(
-        client, "stale_rule_1", {"action": "approve", "statement": EDITED}
-    )
+def test_review_edit_and_approve_also_moves_last_reviewed_at(
+    client, repository, review_id
+):
+    response = decide(client, review_id, approve(repository, EDITED))
 
     assert response.status_code == 200
     rule = repository.rules["rule_1"]
     assert rule.statement.model_dump() == EDITED
-    assert rule.updated_at == NOW
+    assert (rule.updated_at, rule.last_reviewed_at) == (NOW, NOW)
+    assert repository.candidates[review_id].statement.model_dump() == EDITED
+
+
+def test_review_reject_changes_neither_date(client, repository, review_id):
+    before = repository.rules["rule_1"]
+    response = decide(client, review_id, {"action": "reject"})
+
+    assert response.status_code == 200
+    assert repository.rules["rule_1"] == before
+    assert repository.candidates[review_id].status == "rejected"
 
 
 @pytest.mark.parametrize("candidate_id", ["post_1_1", "post_1_2", "stale_rule_1"])
@@ -338,6 +481,7 @@ def test_reject_with_statement_is_invalid(client, repository):
         {"action": "publish"},
         {"action": "approve", "statement": {"ja": " ", "en": "x"}},
         {"action": "approve", "status": "approved"},
+        {"action": "approve", "expected_version": ""},
     ],
 )
 def test_rejects_invalid_decision_bodies(client, repository, body):
@@ -347,12 +491,24 @@ def test_rejects_invalid_decision_bodies(client, repository, body):
     assert repository.candidates["post_1_1"].status == "pending"
 
 
+@pytest.mark.parametrize("candidate_id", ["post_1_2", "stale_rule_1"])
+def test_approving_an_existing_rule_requires_expected_version(
+    client, repository, candidate_id
+):
+    before = dict(repository.rules)
+    response = decide(client, candidate_id, {"action": "approve"})
+
+    assert response.status_code == 422
+    assert repository.candidates[candidate_id].status == "pending"
+    assert repository.rules == before
+
+
 def test_already_decided_candidate_is_a_conflict(client, repository):
     response = decide(client, "post_1_3", {"action": "approve"})
 
     assert response.status_code == 409
     assert repository.candidates["post_1_3"].status == "rejected"
-    assert "rule_new" not in repository.rules
+    assert set(repository.rules) == {"rule_1"}
 
 
 def test_deciding_twice_is_a_conflict(client, repository):
@@ -363,19 +519,130 @@ def test_deciding_twice_is_a_conflict(client, repository):
     assert repository.candidates["post_1_1"].status == "approved"
 
 
-def test_missing_target_rule_is_a_conflict_and_writes_nothing(client, repository):
+@pytest.mark.parametrize("candidate_id", ["post_1_2", "stale_rule_1"])
+def test_approving_with_missing_target_rule_is_a_conflict(
+    client, repository, candidate_id
+):
     del repository.rules["rule_1"]
-    response = decide(client, "post_1_2", {"action": "approve"})
+    response = decide(
+        client, candidate_id, {"action": "approve", "expected_version": "v"}
+    )
 
     assert response.status_code == 409
-    assert repository.candidates["post_1_2"].status == "pending"
+    assert repository.candidates[candidate_id].status == "pending"
     assert repository.rules == {}
+
+
+@pytest.mark.parametrize("candidate_id", ["post_1_2", "stale_rule_1"])
+def test_rejecting_with_missing_target_rule_is_allowed(
+    client, repository, candidate_id
+):
+    # 削除済みのルールを対象にした不要な候補は、却下して片付けられる。
+    del repository.rules["rule_1"]
+    response = decide(client, candidate_id, {"action": "reject"})
+
+    assert response.status_code == 200
+    assert repository.candidates[candidate_id].status == "rejected"
+    assert repository.rules == {}
+
+
+@pytest.mark.parametrize(
+    ("candidate_id", "edited"),
+    [("post_1_2", None), ("stale_rule_1", None), ("stale_rule_1", EDITED)],
+    ids=["update", "review-still-correct", "review-edit"],
+)
+def test_target_rule_in_another_region_is_a_conflict(
+    client, repository, candidate_id, edited
+):
+    repository.candidates[candidate_id] = repository.candidates[
+        candidate_id
+    ].model_copy(update={"region": "osaka"})
+    before = repository.rules["rule_1"]
+
+    response = decide(client, candidate_id, approve(repository, edited))
+
+    assert response.status_code == 409
+    assert repository.candidates[candidate_id].status == "pending"
+    assert repository.rules["rule_1"] == before
 
 
 def test_unknown_candidate_is_not_found(client):
     response = decide(client, "post_9_9", {"action": "approve"})
 
     assert response.status_code == 404
+
+
+# --- 古い画面からの上書き（version の不一致は 409、何も書き込まない） ---------------
+
+
+def edit(client, version, text=EDITED):
+    return client.patch(
+        "/api/admin/rules/rule_1",
+        json={"statement": text, "expected_version": version},
+        headers=AUTH,
+    )
+
+
+def assert_nothing_written(repository, rule_before, candidate_ids=()):
+    assert repository.rules["rule_1"] == rule_before
+    for candidate_id in candidate_ids:
+        assert repository.candidates[candidate_id].status == "pending"
+
+
+def test_two_admins_editing_from_the_same_screen(client, repository):
+    seen = version_of(repository)  # A と B が同じ内容を開いている
+    assert edit(client, seen).status_code == 200  # A が先に保存
+    after_a = repository.rules["rule_1"]
+
+    response = edit(client, seen, statement("Bの編集"))  # B は古い画面から保存
+
+    assert response.status_code == 409
+    assert_nothing_written(repository, after_a)
+
+
+def test_second_update_candidate_for_the_same_rule(client, repository):
+    repository.candidates["post_1_5"] = make_candidate(
+        "post_1_5", type="update", target_rule_id="rule_1"
+    )
+    seen = version_of(repository)
+    assert decide(client, "post_1_2", approve(repository, version=seen)).is_success
+    after_first = repository.rules["rule_1"]
+
+    response = decide(client, "post_1_5", approve(repository, version=seen))
+
+    assert response.status_code == 409
+    assert_nothing_written(repository, after_first, ["post_1_5"])
+
+
+def test_approving_an_old_candidate_after_a_direct_edit(client, repository):
+    seen = version_of(repository)
+    assert edit(client, seen).status_code == 200
+    after_edit = repository.rules["rule_1"]
+
+    response = decide(client, "post_1_2", approve(repository, version=seen))
+
+    assert response.status_code == 409
+    assert_nothing_written(repository, after_edit, ["post_1_2"])
+
+
+def test_review_after_the_rule_changed(client, repository, review_id):
+    seen = version_of(repository)
+    assert edit(client, seen).status_code == 200
+    after_edit = repository.rules["rule_1"]
+
+    response = decide(client, review_id, approve(repository, version=seen))
+
+    assert response.status_code == 409
+    assert_nothing_written(repository, after_edit, [review_id])
+
+
+def test_still_correct_review_changes_the_version(client, repository, review_id):
+    # 文と updated_at が変わらない「問題なし」でも、古い画面からの編集は検知できる。
+    seen = version_of(repository)
+    assert decide(client, review_id, approve(repository, version=seen)).is_success
+
+    assert version_of(repository) != seen
+    assert edit(client, seen).status_code == 409
 
 
 # --- 公開ルールの一覧・編集 -------------------------------------------------
@@ -393,23 +660,30 @@ def test_lists_rules_newest_first(client, repository):
 
     assert response.status_code == 200
     assert [r["id"] for r in response.json()] == ["rule_2", "rule_1"]
+    assert response.json()[1]["version"] == version_of(repository)
 
 
 def test_edits_rule_text_and_moves_updated_at(client, repository):
-    response = client.patch(
-        "/api/admin/rules/rule_1", json={"statement": EDITED}, headers=AUTH
-    )
+    response = edit(client, version_of(repository))
 
     assert response.status_code == 200
     rule = repository.rules["rule_1"]
     assert rule.statement.model_dump() == EDITED
-    assert rule.updated_at == NOW
+    assert (rule.updated_at, rule.last_reviewed_at) == (NOW, None)
     assert response.json()["id"] == "rule_1"
+    # 続けて編集するときは、返ってきた version を使う。
+    assert response.json()["version"] == version_of(repository)
 
 
 @pytest.mark.parametrize(
     "body",
-    [{}, {"statement": {"ja": "", "en": "x"}}, {"statement": EDITED, "region": "x"}],
+    [
+        {},
+        {"statement": EDITED},
+        {"statement": {"ja": "", "en": "x"}, "expected_version": "v"},
+        {"statement": EDITED, "expected_version": "v", "region": "x"},
+    ],
+    ids=["empty", "no-version", "blank-ja", "extra-field"],
 )
 def test_rejects_invalid_rule_edits(client, repository, body):
     response = client.patch("/api/admin/rules/rule_1", json=body, headers=AUTH)
@@ -420,7 +694,20 @@ def test_rejects_invalid_rule_edits(client, repository, body):
 
 def test_editing_unknown_rule_is_not_found(client):
     response = client.patch(
-        "/api/admin/rules/rule_9", json={"statement": EDITED}, headers=AUTH
+        "/api/admin/rules/rule_9",
+        json={"statement": EDITED, "expected_version": "v"},
+        headers=AUTH,
     )
 
     assert response.status_code == 404
+
+
+def test_contention_that_never_settles_is_a_conflict(client, repository):
+    def contended(work):
+        raise TransactionContention("too many concurrent changes")
+
+    repository.run_transaction = contended
+    response = decide(client, "post_1_2", approve(repository))
+
+    assert response.status_code == 409
+    assert repository.candidates["post_1_2"].status == "pending"
