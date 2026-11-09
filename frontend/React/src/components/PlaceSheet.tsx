@@ -66,6 +66,12 @@ export function PlaceSheet(props: Props) {
     return () => observer.disconnect();
   }, [rule?.id, lang]);
 
+  // Back to the short card: the scroller keeps its scroll position even with overflow hidden, so
+  // reset it, or guide rows (and their links) would show in place of the summary and arrow.
+  useLayoutEffect(() => {
+    if (mode === "half" && scrollerRef.current) scrollerRef.current.scrollTop = 0;
+  }, [mode]);
+
   // Opening the full guide brings the tapped rule into view inside the sheet.
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -224,7 +230,8 @@ export function PlaceSheet(props: Props) {
             </button>
           </div>
         )}
-        <div className={styles.guide}>
+        {/* In the short card only the arrow opens the guide; its content can't be tapped or focused. */}
+        <div className={styles.guide} inert={mode === "half"}>
           <GuideContent
             region={region}
             lang={lang}
