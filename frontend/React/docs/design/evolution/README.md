@@ -56,3 +56,13 @@ Following Google Maps, the regional guide no longer opens as a separate page. A 
 | Half sheet                                             | Full sheet                                     | Desktop panel                                      |
 | ------------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------- |
 | ![Half sheet](../screenshots/home-mobile-selected.jpg) | ![Full sheet](../screenshots/guide-mobile.jpg) | ![Desktop panel](../screenshots/guide-desktop.jpg) |
+
+### v3.2 · Manabi wordmark and the manager (2026-11-09)
+
+The four colour dots become the name itself: "Manabi" in plain ink, on every visitor and admin screen; the letters hop one after another on hover, as the dots did. Two coloured versions were tried first (one Google colour per letter, with and then without the ink outline) and dropped: the outlined one was hard to read and the plain one looked off next to the rest of the UI. The black マナビ over the phone map stays as it was. The v3 screenshots above keep the dot version.
+
+On the admin side the 管理 pill is gone. Sign-in shows the manager (the guide sprout in round glasses and a tie) with a 管理者専用！ / Admin only! thought bubble; once signed in, a small manager head next to the wordmark marks admin-only territory.
+
+| Sign-in                                         | Signed in                                             | Resident form                                         |
+| ----------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| ![Admin sign-in](../screenshots/admin-login.jpg) | ![Admin candidates](../screenshots/admin-candidates.jpg) | ![Resident form](../screenshots/contribute-mobile.jpg) |

@@ -39,4 +39,12 @@ npm run dev
 
 チェック: `npm run lint`、`npm run format:check`、`npm run build`
 
-現在の UI は静的なサンプルデータのみで動きます(API・地図キー不要)。画面の状態は URL で切り替えられます。一覧とデザインの方針は [docs/design/README.md](docs/design/README.md) にあります。
+ルールは静的なサンプルデータ(堺市)です。`.env` に `VITE_GOOGLE_MAPS_API_KEY` があれば Google マップを表示し、キーがない・使えない場合は代わりの静的な地図を表示します。画面の状態は URL で切り替えられます。一覧とデザインの方針は [docs/design/README.md](docs/design/README.md) にあります。
+
+## デモ用の現在地
+
+発表や録画のときは、アドレスに `?demo=1` を付けて開くと、現在地ボタンが位置情報の許可を求めずに堺市の中心付近(堺市役所のあたり)を現在地として表示します。
+
+- オン: `http://localhost:5173/?demo=1`
+- オフ: `http://localhost:5173/?demo=0`(タブを閉じてもオフに戻ります)
+- 一度オンにすると、同じタブの中では画面を移動してもオンのままです

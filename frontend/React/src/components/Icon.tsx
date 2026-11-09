@@ -21,7 +21,13 @@ const paths = {
   close: <path d="m6 6 12 12M18 6 6 18" />,
   arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
   back: <path d="M19 12H5M11 6l-6 6 6 6" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  send: <path d="M21 3 3 10.4l7.2 2.9L13.6 21 21 3zM10.2 13.3 15 8.6" />,
   arrowUpRight: <path d="M7 17 17 7M9 7h8v8" />,
+  edit: <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3zM14 8l3 3" />,
+  signOut: (
+    <path d="M14 4h3.5A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5H14M9.5 16.5 5 12l4.5-4.5M5 12h10" />
+  ),
   pin: (
     <>
       <path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z" />

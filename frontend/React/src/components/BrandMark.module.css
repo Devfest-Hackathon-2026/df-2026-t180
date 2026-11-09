@@ -1,60 +1,57 @@
 .brand {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
 .link {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
   min-height: 44px;
 }
 
-.dots {
-  display: flex;
-  gap: 3px;
+/* Plain ink letters, no outline. */
+.word {
+  display: inline-flex;
+  font: 700 26px/1 var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
-.dots span {
-  width: 12px;
-  height: 12px;
-  border: var(--border);
-  border-radius: 50%;
-  background: var(--g-blue);
+.word span {
+  display: inline-block;
+  color: var(--color-ink);
 }
 
-.dots span:nth-child(2) {
-  background: var(--g-red);
-}
-
-.dots span:nth-child(3) {
-  background: var(--g-yellow);
-}
-
-.dots span:nth-child(4) {
-  background: var(--g-green);
-}
-
-.link:hover .dots span {
+.link:hover .word span {
   animation: hop 480ms var(--ease-spring);
 }
 
-.link:hover .dots span:nth-child(2) {
-  animation-delay: 60ms;
+.link:hover .word span:nth-child(2) {
+  animation-delay: 50ms;
 }
 
-.link:hover .dots span:nth-child(3) {
-  animation-delay: 120ms;
+.link:hover .word span:nth-child(3) {
+  animation-delay: 100ms;
 }
 
-.link:hover .dots span:nth-child(4) {
-  animation-delay: 180ms;
+.link:hover .word span:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.link:hover .word span:nth-child(5) {
+  animation-delay: 200ms;
+}
+
+.link:hover .word span:nth-child(6) {
+  animation-delay: 250ms;
 }
 
 @keyframes hop {
   40% {
-    translate: 0 -6px;
+    translate: 0 -5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link:hover .word span {
+    animation: none;
   }
 }

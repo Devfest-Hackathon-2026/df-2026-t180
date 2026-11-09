@@ -1,0 +1,40 @@
+.bar {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(30px + env(safe-area-inset-bottom));
+  left: var(--space-4);
+  z-index: 3;
+  display: grid;
+  gap: var(--space-1);
+  pointer-events: none;
+}
+
+.bar > * {
+  pointer-events: auto;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.row > nav {
+  flex: 1;
+}
+
+/* Keeps the nav the same width when a screen has no action (e.g. after sending). */
+.slot {
+  flex: none;
+  width: 56px;
+  pointer-events: none;
+}
+
+/* Wider screens without the header nav (the resident form): follow the content column. */
+@media (min-width: 720px) {
+  .bar {
+    right: auto;
+    left: 50%;
+    width: min(592px, calc(100% - 48px));
+    translate: -50% 0;
+  }
+}
