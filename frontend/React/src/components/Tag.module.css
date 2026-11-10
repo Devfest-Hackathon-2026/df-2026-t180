@@ -1,0 +1,30 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 3px 10px;
+  font: 600 11px/1.4 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: var(--radius-full);
+}
+
+.tag[data-tone="manners"] {
+  background: var(--cat-manners-soft);
+}
+
+.tag[data-tone="transport"] {
+  background: var(--cat-transport-soft);
+}
+
+.tag[data-tone="living"] {
+  background: var(--cat-living-soft);
+}
+
+.tag[data-tone="highlight"] {
+  background: var(--color-highlight);
+}

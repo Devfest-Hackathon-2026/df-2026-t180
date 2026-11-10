@@ -1,0 +1,55 @@
+.button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  color: var(--color-ink);
+  background: var(--color-surface);
+  border: var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition:
+    translate var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) ease,
+    color var(--duration-base) ease;
+}
+
+/* Searching: a soft ring pulses out from the button. */
+.button[data-status="locating"]::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--g-blue);
+  border-radius: 50%;
+  animation: ping 1100ms var(--ease-out) infinite;
+}
+
+/*
+ * Location on: the button lifts onto its hard shadow, and that is the only visual change (no
+ * hover effect), so the shadow always means "on". Tapping again drops it back.
+ */
+.button[data-status="on"] {
+  translate: -2px -2px;
+  box-shadow: var(--shadow-hard);
+}
+
+.button[data-size="row"] {
+  flex: none;
+  width: 56px;
+  height: 56px;
+}
+
+.button[data-status="denied"] {
+  color: var(--color-ink-soft);
+  border-style: dashed;
+}
+
+@keyframes ping {
+  to {
+    opacity: 0;
+    scale: 1.5;
+  }
+}

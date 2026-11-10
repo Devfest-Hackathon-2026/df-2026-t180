@@ -1,0 +1,88 @@
+/*
+ * Design tokens. The palette follows the Google brand colours; the lime is the
+ * mascot's colour, carried over from the previous design.
+ */
+:root {
+  /* Google palette */
+  --g-blue: #4285f4;
+  --g-blue-deep: #174ea6;
+  --g-blue-light: #d2e3fc;
+  --g-red: #ea4335;
+  --g-red-deep: #a50e0e;
+  --g-red-light: #fad2cf;
+  --g-yellow: #fbbc04;
+  --g-yellow-light: #feefc3;
+  --g-orange: #e37400;
+  --g-orange-light: #fedfc8;
+  --g-green: #34a853;
+  --g-green-deep: #0d652d;
+  --g-green-light: #ceead6;
+  --g-grey-light: #f1f3f4;
+  --g-grey: #9aa0a6;
+  --g-black: #202124;
+  --lime: #c6f36d;
+
+  /* Surfaces and ink */
+  --color-bg: var(--g-grey-light);
+  --color-surface: #fff;
+  --color-ink: var(--g-black);
+  --color-ink-soft: #5f6368;
+  --color-on-ink: #fff;
+  --color-divider: #dadce0;
+  --color-focus: var(--g-blue-deep);
+  --color-highlight: var(--g-yellow);
+  --color-highlight-soft: var(--g-yellow-light);
+
+  /* Categories */
+  --cat-manners: var(--g-red);
+  --cat-manners-soft: var(--g-red-light);
+  --cat-transport: var(--g-blue);
+  --cat-transport-soft: var(--g-blue-light);
+  --cat-living: var(--g-green);
+  --cat-living-soft: var(--g-green-light);
+
+  /* Placeholder map */
+  --map-land: #e8eaed;
+  --map-green: var(--g-green-light);
+  --map-water: #aecbfa;
+  --map-road: #fff;
+  --map-rail: var(--g-grey);
+  --map-contour: #dfe1e5;
+
+  /* Type */
+  --font-sans: "Google Sans Flex Variable", "Noto Sans JP Variable", system-ui, sans-serif;
+  --font-mono: "Google Sans Code Variable", "Noto Sans JP Variable", ui-monospace, monospace;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Shape */
+  --stroke: 2px;
+  --border: var(--stroke) solid var(--color-ink);
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-full: 999px;
+  --target-min: 44px;
+
+  /* Elevation: a hard offset shadow, as on printed stickers */
+  --shadow-hard: 4px 4px 0 var(--color-ink);
+  --shadow-hard-sm: 2px 2px 0 var(--color-ink);
+  --shadow-soft: 0 10px 30px rgb(32 33 36 / 0.16);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+  --duration-pan: 480ms;
+  --duration-slide: 380ms;
+}

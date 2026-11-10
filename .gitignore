@@ -1,31 +1,52 @@
-# 秘密情報（コミットしない）
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local secrets
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+service-account*.json
+*-firebase-adminsdk-*.json
+
+# Terraform (dependency lock file is intentionally versioned)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+.terraform.tfstate.lock.info
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# 運営の提出用リポジトリの初期設定から
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
-*.pem
-*.key
 *.p12
-service-account*.json
 credentials*.json
 google-services.json
 GoogleService-Info.plist
-
-# 依存関係とビルドの成果物
 node_modules/
 dist/
 build/
 out/
 .next/
 .wrangler/
-__pycache__/
 *.pyc
-.venv/
 venv/
-
-# OS とエディタ
 .DS_Store
 Thumbs.db
 .idea/
