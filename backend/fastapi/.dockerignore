@@ -1,0 +1,21 @@
+# Allow only runtime source files; exclude credentials even inside source folders.
+**
+!Dockerfile
+!requirements.txt
+!main.py
+!api/
+!api/**
+!schemas/
+!schemas/**
+!services/
+!services/**
+!repositories/
+!repositories/**
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/service-account*.json
+**/*-firebase-adminsdk-*.json

@@ -15,3 +15,18 @@ htmlcov/
 *.key
 service-account*.json
 *-firebase-adminsdk-*.json
+
+# Terraform (dependency lock file is intentionally versioned)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+.terraform.tfstate.lock.info
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
