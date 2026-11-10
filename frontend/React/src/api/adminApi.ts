@@ -1,5 +1,5 @@
 import type { Candidate } from "@/content/admin";
-import type { Localised } from "@/content/types";
+import type { Category, Localised } from "@/content/types";
 import { idToken } from "./adminAuth";
 
 /**
@@ -48,6 +48,8 @@ export type AdminRule = {
   lastReviewedAt?: string;
   /** Sent back when editing, so the server can refuse if the rule changed meanwhile. */
   version: string;
+  category?: Category;
+  place?: Localised;
 };
 
 type ApiRule = {
@@ -57,6 +59,8 @@ type ApiRule = {
   updated_at: string;
   last_reviewed_at?: string | null;
   version: string;
+  category?: Category | null;
+  place?: Localised | null;
 };
 
 type ApiCandidate = {
@@ -87,6 +91,8 @@ const toRule = (rule: ApiRule): AdminRule => ({
   updatedAt: rule.updated_at,
   lastReviewedAt: rule.last_reviewed_at ?? undefined,
   version: rule.version,
+  category: rule.category ?? undefined,
+  place: rule.place ?? undefined,
 });
 
 const toCandidate = (c: ApiCandidate): Candidate => ({

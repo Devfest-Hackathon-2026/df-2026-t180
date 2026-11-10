@@ -10,13 +10,19 @@ vi.mock("@/api/adminAuth", () => ({ adminLive: true }));
 
 const { HomePage } = await import("./HomePage");
 
-const rule = (id: string, ja: string, location?: { lat: number; lng: number }) => ({
+const rule = (
+  id: string,
+  ja: string,
+  location?: { lat: number; lng: number },
+  extra: Record<string, unknown> = {},
+) => ({
   id,
   region: "sakai",
   statement: { ja, en: `${ja} (en)` },
   updated_at: "2026-11-09T00:00:00Z",
   last_reviewed_at: null,
   location: location ?? null,
+  ...extra,
 });
 
 beforeEach(() => {
@@ -40,6 +46,15 @@ beforeEach(() => {
               lng: 135.4873,
             }),
             rule("rule_area", "ごみは決められた日に出してください。"),
+            rule(
+              "rule_bus",
+              "駅前のバス乗り場は行き先ごとに分かれています。",
+              { lat: 34.5753, lng: 135.4832 },
+              {
+                category: "transport",
+                place: { ja: "堺東駅 バス乗り場", en: "Sakai-higashi Sta." },
+              },
+            ),
           ]),
           { status: 200 },
         ),
@@ -81,5 +96,22 @@ describe("map pins from published rules", () => {
 
     const sheet = screen.getByRole("region", { name: "堺市" });
     expect(sheet.textContent).toContain("公園の芝生ではバーベキューをしないでください。");
+  });
+});
+
+describe("category and place from the API (#22)", () => {
+  it("colours the pin by category and labels it with the place name", async () => {
+    await open("/");
+
+    const pin = screen.getByRole("link", { name: /^堺東駅 バス乗り場/ });
+    expect(pin.getAttribute("data-category")).toBe("transport");
+  });
+
+  it("counts rules under their category tab in the guide", async () => {
+    await open("/?region=sakai&sheet=full");
+
+    const tab = screen.getByRole("link", { name: /^交通/ });
+    expect(tab.textContent).toContain("1");
+    expect(screen.getByRole("link", { name: /^すべて/ }).textContent).toContain("3");
   });
 });

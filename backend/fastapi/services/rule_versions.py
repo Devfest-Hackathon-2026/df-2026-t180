@@ -13,5 +13,10 @@ from schemas.rule import Rule
 
 def rule_version(rule: Rule) -> str:
     """ルールの保存内容から計算する版。内容が 1 か所でも変わると値が変わる。"""
-    data = json.dumps(rule.model_dump(mode="json"), sort_keys=True, ensure_ascii=False)
+    fields = rule.model_dump(mode="json")
+    # #22 より前の版と一致させる。既存フィールドの None は従来どおり含める。
+    for name in ("category", "place"):
+        if fields[name] is None:
+            fields.pop(name)
+    data = json.dumps(fields, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(data.encode()).hexdigest()[:16]

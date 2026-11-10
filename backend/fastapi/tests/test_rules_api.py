@@ -59,6 +59,8 @@ def test_list_region_rules_returns_only_that_region(client):
         "updated_at": "2026-11-07T00:00:00Z",
         "last_reviewed_at": None,
         "location": None,
+        "category": None,
+        "place": None,
     }
 
 
@@ -119,3 +121,44 @@ def test_firestore_repository_filters_by_region():
         "==",
         "sakai",
     )
+
+
+PLACE = {"ja": "大仙公園", "en": "Daisen Park"}
+
+
+def test_list_region_rules_returns_category_and_place_when_set():
+    # カテゴリと場所名があるルールはそのまま返し、ないルールは None になる（#22）。
+    rules = [
+        Rule.model_validate(
+            {
+                **make_rule("rule_001", "sakai").model_dump(),
+                "category": "manners",
+                "place": PLACE,
+            }
+        ),
+        make_rule("rule_002", "sakai"),
+    ]
+    app.dependency_overrides[get_rule_repository] = lambda: FakeRuleRepository(rules)
+    try:
+        body = TestClient(app).get("/api/regions/sakai/rules").json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert [(r["category"], r["place"]) for r in body] == [
+        ("manners", PLACE),
+        (None, None),
+    ]
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"category": "shopping"},
+        {"category": ""},
+        {"place": {"ja": "大仙公園"}},
+        {"place": {"ja": "", "en": "Daisen Park"}},
+    ],
+)
+def test_rule_rejects_unknown_category_and_incomplete_place(fields):
+    with pytest.raises(ValueError):
+        Rule.model_validate({**make_rule("rule_001", "sakai").model_dump(), **fields})

@@ -813,3 +813,22 @@ def test_flag_for_a_candidate_generated_by_the_batch(client, repository):
     assert flag() is False
     edit(client, version_of(repository))  # 別の管理者がルールを編集
     assert flag() is True
+
+
+def test_admin_changes_keep_category_and_place(client, repository):
+    # 文の更新や直接編集で、カテゴリと場所名は消えない（#22）。
+    place = {"ja": "大仙公園", "en": "Daisen Park"}
+    repository.rules["rule_1"] = Rule.model_validate(
+        {
+            **repository.rules["rule_1"].model_dump(),
+            "category": "manners",
+            "place": place,
+        }
+    )
+    assert decide(client, "post_1_2", approve(repository)).status_code == 200
+    assert edit(client, version_of(repository)).status_code == 200
+
+    rule = repository.rules["rule_1"]
+    assert (rule.category, rule.place.model_dump()) == ("manners", place)
+    listed = client.get("/api/admin/rules", headers=AUTH).json()[0]
+    assert (listed["category"], listed["place"]) == ("manners", place)
