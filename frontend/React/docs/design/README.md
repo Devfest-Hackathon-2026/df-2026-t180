@@ -22,6 +22,12 @@ The title is the place (大仙公園 / Daisen Park); the line under it is the ci
 
 The category tabs sit directly under this header and are part of it, outside the scroll area, so they never move (not even with the bounce at either end). The full sheet has one fixed block and only the rules scroll beneath it (no second sticky layer). The old intro row (rule count, last-updated date, mascot) was removed for this: the tabs already show each category's count, and the mascot appears on empty and error states instead.
 
+## Guide tabs and real data
+
+The guide has four tabs: 「すべて」 (every rule) then マナー / 交通 / 暮らし. Opening the guide from search starts on 「すべて」; tapping a pin starts on that rule's category. 「すべて」 and rules without a category use Google light blue. On narrow sheets (phones and the desktop side panel) the tabs drop their small icons so all four fit; this is sized by the sheet, not the screen.
+
+When the app is connected to the project (Firebase settings in `.env`), the guide loads the region's rules from `GET /api/regions/{id}/rules`. Those rules have no category, place or location yet (#22, #15), so they appear under 「すべて」 only, the category tabs show 0 with 「まだルールはありません」, and the map shows no sample pins rather than mixing sample places with real rules. While loading it shows 「読み込み中…」; if the request fails, 「ルールを読み込めませんでした」. Without the settings everything uses the sample rules.
+
 ## Guide ordering (scales to many rules)
 
 Each category tab has two parts:
@@ -48,7 +54,7 @@ Posts are merged and approved before they become rules, so the guide stays a cur
 
 - No optional badges, no helper sentence and no mascot on the form: only required fields carry a 必須 badge. Validation runs on send: the first missing field gets focus, a light red tint and one line of red text. No blue focus ring; focused fields lift with the hard shadow.
 - The place picker needs the live map. Without a key the confirm button stays disabled.
-- Sending is mocked and goes to the thank-you screen, which says an admin checks posts before they are published. It becomes `POST /api/posts` when the endpoint (#10) is ready.
+- Sending goes to `POST /api/posts` when the app is connected to the project (Firebase settings in `.env`); the place is not sent while location (#15) is on hold. If sending fails, 「送信できませんでした」 shows and the inputs stay. Without the settings it is a sample run: the thank-you screen adds 「サンプル表示のため、実際には送信されていません」.
 
 ## Admin (機能D)
 
@@ -257,4 +263,4 @@ All motion stops under `prefers-reduced-motion: reduce`.
 
 ## Mocked
 
-Search matching and all rules are static sample data. The location button uses the browser Geolocation API: it asks for permission on the first tap, then the mascot stands on the visitor's position (YouMarker) and follows them while it is on. Tapping again turns it off: the mascot disappears, tracking stops, the position is forgotten and the map stays where it is. The position stays in the browser and is never sent. Away from the demo region (over 15 km), a 「堺市に戻る」 pill moves the map back. Refusing shows the location-off notice. For presentations, `?demo=1` makes the button place the visitor at a fixed spot in central 堺市 (near the city office, zoomed out one step to show the pins) without asking for permission; it sticks for the browser tab, and `?demo=0` or closing the tab turns it off. The map is the Google Maps JavaScript API when `VITE_GOOGLE_MAPS_API_KEY` is set in `.env` (markers are `AdvancedMarker`s with our own design, using `VITE_GOOGLE_MAP_ID`); without a key, or if the key is rejected, the static placeholder drawing is shown instead. Sending the resident form is mocked; the admin side is live when Firebase is configured (see Admin).
+Search matching and all rules are static sample data. The location button uses the browser Geolocation API: it asks for permission on the first tap, then the mascot stands on the visitor's position (YouMarker) and follows them while it is on. Tapping again turns it off: the mascot disappears, tracking stops, the position is forgotten and the map stays where it is. The position stays in the browser and is never sent. Away from the demo region (over 15 km), a 「堺市に戻る」 pill moves the map back. Refusing shows the location-off notice. For presentations, `?demo=1` makes the button place the visitor at a fixed spot in central 堺市 (near the city office, zoomed out one step to show the pins) without asking for permission; it sticks for the browser tab, and `?demo=0` or closing the tab turns it off. The map is the Google Maps JavaScript API when `VITE_GOOGLE_MAPS_API_KEY` is set in `.env` (markers are `AdvancedMarker`s with our own design, using `VITE_GOOGLE_MAP_ID`); without a key, or if the key is rejected, the static placeholder drawing is shown instead. The resident form and the admin side are live when Firebase is configured in `.env` (see Resident form and Admin); otherwise both are sample runs.

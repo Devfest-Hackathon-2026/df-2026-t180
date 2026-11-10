@@ -2,11 +2,13 @@ import { Link } from "react-router";
 import { categories } from "@/content/copy";
 import type { Category, Lang } from "@/content/types";
 import { CategoryIcon } from "./CategoryIcon";
+import { Icon } from "./Icon";
 import styles from "./MapMarker.module.css";
 
 type Props = {
   name: string;
-  category: Category;
+  /** Without one (rules from the API, #22) the pin is a neutral blue with a plain pin icon. */
+  category?: Category;
   lang: Lang;
   to: string;
   selected?: boolean;
@@ -25,7 +27,7 @@ export function MapMarker(props: Props) {
   const pin = (
     <span className={styles.pin}>
       <span className={styles.dot}>
-        <CategoryIcon category={category} size={18} />
+        {category ? <CategoryIcon category={category} size={18} /> : <Icon name="pin" size={18} />}
       </span>
       <span className={styles.name} aria-hidden="true">
         {name}
@@ -56,7 +58,7 @@ export function MapMarker(props: Props) {
       data-selected={selected || undefined}
       data-dimmed={dimmed || undefined}
       aria-current={selected ? "true" : undefined}
-      aria-label={`${name}, ${categories[category].label[lang]}`}
+      aria-label={category ? `${name}, ${categories[category].label[lang]}` : name}
       preventScrollReset
     >
       {pin}

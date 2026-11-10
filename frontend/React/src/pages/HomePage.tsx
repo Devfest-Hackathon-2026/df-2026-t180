@@ -12,24 +12,30 @@ import { PlaceSheet } from "@/components/PlaceSheet";
 import { StateCard } from "@/components/StateCard";
 import { Tag } from "@/components/Tag";
 import { appName, categoryOrder, t } from "@/content/copy";
+import { adminLive as apiLive } from "@/api/adminAuth";
 import { findRegion, pinnedRules, regions, rules } from "@/content/rules";
-import type { Category, LatLng, Region } from "@/content/types";
+import type { Category, GuideTab, LatLng, LocatedRule, Region } from "@/content/types";
 import { href, readLang, type Params } from "@/content/url";
 import { distanceKm, isDemoLocation, useMyLocation } from "@/hooks/useMyLocation";
+import { useRegionRules } from "@/hooks/useRegionRules";
 import styles from "./HomePage.module.css";
 
-function searchRegions(query: string): Region[] {
+const hasLocation = (rule: { location?: LatLng }): rule is LocatedRule => Boolean(rule.location);
+
+/** Region names, plus the place names of its pins, match the search. */
+function searchRegions(query: string, pinned: LocatedRule[]): Region[] {
   const needle = query.trim().toLowerCase();
   return regions.filter((region) => {
     const names = [region.name.ja, region.name.en];
-    const pins = pinnedRules.filter((rule) => rule.region === region.id);
-    pins.forEach((rule) => names.push(rule.place.ja, rule.place.en));
+    pinned
+      .filter((rule) => rule.region === region.id && rule.place)
+      .forEach((rule) => names.push(rule.place!.ja, rule.place!.en));
     return names.some((name) => name.toLowerCase().includes(needle));
   });
 }
 
-const isCategory = (value: string | undefined): value is Category =>
-  categoryOrder.includes(value as Category);
+const isGuideTab = (value: string | undefined): value is GuideTab =>
+  value === "all" || categoryOrder.includes(value as Category);
 
 /** Params that belong to the sheet; cleared together when it closes. */
 const noSheet = { spot: undefined, region: undefined, sheet: undefined, tab: undefined };
@@ -41,8 +47,14 @@ export function HomePage() {
   const lang = readLang(params);
   const { state, q } = params;
 
-  const results = q ? searchRegions(q) : [];
-  const selected = pinnedRules.find((rule) => rule.id === params.spot);
+  // Pins: with a live connection, the published rules of the shown area that have a location
+  // (#15); otherwise the sample rules. Rules without a location still appear in the guide.
+  const mapRegion = findRegion(params.region) ?? regions[0];
+  const live = useRegionRules(mapRegion.id);
+  const mapRules: LocatedRule[] = apiLive ? live.rules.filter(hasLocation) : pinnedRules;
+
+  const results = q ? searchRegions(q, mapRules) : [];
+  const selected = mapRules.find((rule) => rule.id === params.spot);
   const isLoading = state === "loading";
   const isError = state === "error";
   const isEmpty = state === "empty" || (Boolean(q) && results.length === 0);
@@ -50,7 +62,8 @@ export function HomePage() {
   // Sheet: a pin opens it at half height; the guide (full) can also open straight from search.
   const sheetRegion = findRegion(selected?.region ?? params.region);
   const sheetMode = selected && params.sheet !== "full" ? "half" : "full";
-  const tab: Category = isCategory(params.tab) ? params.tab : (selected?.category ?? "manners");
+  // A tapped pin opens its rule's category; opening from search shows every rule.
+  const tab: GuideTab = isGuideTab(params.tab) ? params.tab : (selected?.category ?? "all");
   const sheetOpen = Boolean(sheetRegion) && !isLoading && !isError;
   const here = (patch: Params) => href("/", params, patch);
 
@@ -85,9 +98,10 @@ export function HomePage() {
       <LocationButton lang={lang} status={locationStatus} onClick={onLocate} />
     </>
   );
-  const pins: MapPin[] = pinnedRules.map((rule) => ({
+  const pins: MapPin[] = mapRules.map((rule) => ({
     id: rule.id,
-    name: rule.place[lang],
+    // Without a place name yet (#22), the pin is labelled with its rule.
+    name: rule.place?.[lang] ?? rule.statement[lang],
     category: rule.category,
     location: rule.location,
     to: here({ ...noSheet, spot: rule.id }),
@@ -166,9 +180,16 @@ export function HomePage() {
                       <span className={styles.resultText}>
                         <span className={styles.resultName}>{region.name[lang]}</span>
                         <span className={styles.resultMeta}>
-                          {region.sample && <Tag tone="highlight">{t("sample", lang)}</Tag>}
-                          {rules.filter((rule) => rule.region === region.id).length}{" "}
-                          {t("rules", lang)}
+                          {/* Sample label and count only for sample data; real counts are in the guide. */}
+                          {!apiLive && region.sample && (
+                            <Tag tone="highlight">{t("sample", lang)}</Tag>
+                          )}
+                          {!apiLive && (
+                            <>
+                              {rules.filter((rule) => rule.region === region.id).length}{" "}
+                              {t("rules", lang)}
+                            </>
+                          )}
                         </span>
                       </span>
                       <span className={styles.resultArrow} aria-hidden="true">

@@ -131,7 +131,7 @@ export const rules: Rule[] = [
 ];
 
 export const pinnedRules = rules.filter((rule): rule is PinnedRule =>
-  Boolean(rule.location && rule.place),
+  Boolean(rule.location && rule.place && rule.category),
 );
 
 export const findRegion = (id: string | undefined) => regions.find((region) => region.id === id);

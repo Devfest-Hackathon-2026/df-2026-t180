@@ -9,8 +9,9 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { categories, t } from "@/content/copy";
-import type { Category, Lang, LatLng, PinnedRule, Region } from "@/content/types";
+import type { GuideTab, Lang, LatLng, LocatedRule, Region } from "@/content/types";
 import type { Params } from "@/content/url";
+import { useRegionRules } from "@/hooks/useRegionRules";
 import { CategoryIcon } from "./CategoryIcon";
 import { GuideContent, GuideTabs } from "./GuideContent";
 import { Icon } from "./Icon";
@@ -22,8 +23,8 @@ export type SheetMode = "half" | "full";
 type Props = {
   mode: SheetMode;
   region: Region;
-  rule?: PinnedRule;
-  tab: Category;
+  rule?: LocatedRule;
+  tab: GuideTab;
   lang: Lang;
   linkTo: (patch: Params) => string;
   closeTo: string;
@@ -46,6 +47,8 @@ const desktop = () => window.matchMedia("(min-width: 900px)").matches;
  */
 export function PlaceSheet(props: Props) {
   const { mode, region, rule, tab, lang, linkTo, closeTo, expandTo, collapseTo, above, me } = props;
+  // Sample rules, or the region's real rules from the API when connected.
+  const { rules, status } = useRegionRules(region.id);
   const navigate = useNavigate();
   const sheetRef = useRef<HTMLElement>(null);
   const grabRef = useRef<HTMLDivElement>(null);
@@ -164,9 +167,11 @@ export function PlaceSheet(props: Props) {
 
   // Title is the place (or the area when the guide opens from search); the line under it is
   // 「堺市 ・ 大阪府」 / "Sakai · Osaka", or just the prefecture under an area title.
-  const title = rule ? rule.place[lang] : region.name[lang];
+  // A pin without a place name (rules from the API, #22) is titled with the area instead.
+  const place = rule?.place?.[lang];
+  const title = place ?? region.name[lang];
   const sep = lang === "ja" ? " ・ " : " · ";
-  const subtitle = rule ? `${region.name[lang]}${sep}${region.parent[lang]}` : region.parent[lang];
+  const subtitle = place ? `${region.name[lang]}${sep}${region.parent[lang]}` : region.parent[lang];
 
   return (
     <section
@@ -193,7 +198,7 @@ export function PlaceSheet(props: Props) {
           <span aria-hidden="true" />
         </button>
         <div className={styles.head}>
-          {rule ? (
+          {rule?.category ? (
             <Tag tone={rule.category} icon={<CategoryIcon category={rule.category} size={14} />}>
               {categories[rule.category].label[lang]}
             </Tag>
@@ -220,7 +225,7 @@ export function PlaceSheet(props: Props) {
           measured header so the short card's height is unchanged. */}
       {mode === "full" && (
         <div className={styles.tabsBar}>
-          <GuideTabs region={region} lang={lang} tab={tab} linkTo={linkTo} />
+          <GuideTabs lang={lang} tab={tab} linkTo={linkTo} rules={rules} />
         </div>
       )}
 
@@ -245,6 +250,8 @@ export function PlaceSheet(props: Props) {
             region={region}
             lang={lang}
             tab={tab}
+            rules={rules}
+            status={status}
             focusedId={rule?.id}
             linkTo={linkTo}
             origin={rule?.location ?? me}

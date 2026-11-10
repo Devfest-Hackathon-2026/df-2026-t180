@@ -47,6 +47,10 @@ const strings = {
   retry: { ja: "もう一度", en: "Try again" },
   loading: { ja: "読み込み中", en: "Loading" },
   categoriesNav: { ja: "カテゴリ", en: "Categories" },
+  allRules: { ja: "すべて", en: "All" },
+  guideLoading: { ja: "読み込み中…", en: "Loading…" },
+  guideFailed: { ja: "ルールを読み込めませんでした", en: "Couldn't load the rules" },
+  guideEmpty: { ja: "まだルールはありません", en: "No rules here yet" },
   pendingTitle: { ja: "準備中です", en: "Coming soon" },
   formTitle: { ja: "地元のルールを教えてください", en: "Share a local rule" },
   fieldRegion: { ja: "地域", en: "Area" },
@@ -83,6 +87,10 @@ const strings = {
     en: "Once an admin checks it, it will appear in the area guide",
   },
   postAnother: { ja: "もう1件送る", en: "Send another" },
+  sampleNotSent: {
+    ja: "サンプル表示のため、実際には送信されていません",
+    en: "This is a sample run, so nothing was actually sent",
+  },
 } satisfies Record<string, Localised>;
 
 export type CopyKey = keyof typeof strings;

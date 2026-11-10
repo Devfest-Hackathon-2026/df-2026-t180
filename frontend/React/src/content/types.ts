@@ -1,5 +1,7 @@
 export type Lang = "ja" | "en";
 export type Category = "manners" | "transport" | "living";
+/** A guide tab: every rule, or one category. */
+export type GuideTab = "all" | Category;
 
 export type Localised = Record<Lang, string>;
 
@@ -10,8 +12,11 @@ export type LatLng = { lat: number; lng: number };
 export type Rule = {
   id: string;
   region: string;
-  /** UI field, not yet in the backend schema: drives the Manners / Transport / Living tabs. */
-  category: Category;
+  /**
+   * UI field, not yet in the backend schema: drives the Manners / Transport / Living tabs. Rules
+   * from the API have none yet (see #22), so they appear under 「すべて」 only.
+   */
+  category?: Category;
   statement: Localised;
   updatedAt: string;
   /** Only rules with a location get a pin on the map; all rules appear in the regional guide. */
@@ -20,7 +25,13 @@ export type Rule = {
   place?: Localised;
 };
 
-export type PinnedRule = Rule & { location: LatLng; place: Localised };
+export type PinnedRule = Rule & { location: LatLng; place: Localised; category: Category };
+
+/**
+ * A rule that gets a pin. Rules from the API have a location (#15) but no place name or category
+ * yet (#22), so those two are optional here; the sample rules have both.
+ */
+export type LocatedRule = Rule & { location: LatLng };
 
 export type Region = {
   id: string;
